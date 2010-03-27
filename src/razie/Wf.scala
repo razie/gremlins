@@ -1,0 +1,5 @@
+package razie
+
+object Wf {
+
+}
