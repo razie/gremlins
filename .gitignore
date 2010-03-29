@@ -1,5 +1,4 @@
 bin
 .scala_dependencies
 dist
-src/public/CodeMirror
 
