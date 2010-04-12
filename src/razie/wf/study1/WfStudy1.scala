@@ -2,7 +2,7 @@ package razie.wf.study1
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfActBase}
+import razie.wf.{WfExec}
 
 
 /** 
@@ -13,6 +13,7 @@ import razie.wf.{WfActBase}
  * via continuations a la swarm
  * 
  * interestingly, in this case, state doesn't make much sense, since activities are strait code...
+ * 
  * @author razvanc
  */
 object Wf1 {
@@ -24,13 +25,13 @@ object Wf1 {
 }
 
 /** starting to add syntax niceties, implementation-transparent */
-trait WfAct extends WfActBase {
+trait WfAct extends WfExec {
   def + (e:WfAct) = WfSeq (this,e)
   def | (e:WfAct) = WfPar (this,e)
 }
 
-  class wabase[T<:WfActBase] {
-    def log (f: => String) = new WfActBase { override def exec (x:Any) = println(f) }
+  class wabase[T<:WfExec] {
+    def log (f: => String) = new WfExec { override def exec (x:Any) = println(f) }
   }
 
   case class WfProxy (proxied:WfAct) extends WfAct { 

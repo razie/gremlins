@@ -2,7 +2,7 @@ package razie.wf.study3
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
+import razie.wf.{WfExec, WfaState, ProcStatus, ProcState}
 
 //-------------------- engine/graph
 
@@ -11,7 +11,7 @@ import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
  * 
  * Mixing in the state alos allows its removal, should I decide to store it outside, later...cool, huh?
  */
-abstract case class WA () extends WfActBase with razie.g.GNode[WA, WL] with WfaState {
+abstract case class WA () extends WfExec with razie.g.GNode[WA, WL] with WfaState {
   override def gnodes = activities
   override def glinks = links
     

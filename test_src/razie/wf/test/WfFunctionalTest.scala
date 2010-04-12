@@ -4,35 +4,32 @@ import org.scalatest.junit._
 import com.razie.pub.actionables._
 import com.razie.pub.actionables.library._
 
-import razie.wf._
-import razie.wf.study2._
+//import razie.wf._
+import razie.wf.study4._
 
 class WfFunctionalTest extends JUnit3Suite {
+//  import razie.wf.study4.Wf._
+  import Wf._
 
-  def testIf1 :Unit = expect ("ExecTelnet") {
-    val o = ExecutableFactory.instance.make("raziecmd:telnet host=localhost,port=4449,cmd=pause")
-    o.getClass().getSimpleName
-  }
+  lazy val wdefif1 = wif (2==1) {
+     var lacc = ""
+     lacc += "it's "
+     lacc += "true " + "1 "
+     lacc += "..."
+     lacc
+  } welse waif (_==2) { v =>
+     var lacc = ""
+     lacc += "it's "
+     lacc += "true " + v + " "
+     lacc += "..."
+     lacc
+  } welse 
+     waf {_.toString + " it's"} + 
+     waf {s:Any => s.toString + " false"} + 
+     waf {s:Any => s.toString + " ..."} 
 
-  def testLog :Unit = expect ("ExecLog") {
-    val o = ExecutableFactory.instance.make("raziecmd:log host=localhost,port=4449,cmd=pause")
-    o.getClass().getSimpleName
-  }
-
-  def testAdd :Unit = expect ("ExecAdd") {
-    val o = ExecutableFactory.instance.make("raziecmd:add a=2,b=3")
-    o.getClass().getSimpleName
-  }
-
-  def testAdd1 :Unit = expect ("23") {
-    val o = ActFactory.make("what?", "raziecmd:add a=2,b=3")
-    o.execute a "result"
-  }
- 
-  // test the url-like format
-  def testAdd2 :Unit = expect ("23") {
-    val o = ActFactory.make("what?", "raziecmd:add?a=2&b=3")
-    o.execute a "result"
-  }
+  def testIf1 = expect ("1 it's false ...") { wdefif1 run 1 }
+  def testIf2 = expect ("it's true 2 ...") { wdefif1 run 2 }
+  def testIf3 = expect ("3 it's false ...") { wdefif1 run 3 }
 
 }

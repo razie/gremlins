@@ -8,6 +8,11 @@ import razie.wf.{WfaState, ProcStatus, ProcState}
  * in this version, I'm adding the underlying structure for an engine to run through. this gives
  * state, persistency, distribution and visualization 
  * 
+ * persistency and distribution should be simple via serializing the state
+ * 
+ * the way i'm adding structure is: an underlying graph engine processes nodes and follows links. Each
+ * node's processing returns the links to follow next. Multiple links imply spawning of execution threads.
+ *  
  * @author razvanc
  */
 object Wf2 {

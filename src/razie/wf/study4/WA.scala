@@ -2,7 +2,7 @@ package razie.wf.study4
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
+import razie.wf.{WfaState, ProcStatus, ProcState}
 
 //-------------------- engine/graph
 
@@ -11,7 +11,7 @@ import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
  * 
  * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
-abstract case class WA () extends WfActBase with razie.g.GNode[WA, WL] with WfaState {
+abstract case class WA () extends razie.g.GNode[WA, WL] with WfaState {
   override def gnodes = activities
   override def glinks = links
     
@@ -19,20 +19,22 @@ abstract case class WA () extends WfActBase with razie.g.GNode[WA, WL] with WfaS
   def links : Seq[WL] // links 
    
   /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-  def execute (in:AC, v:Any) : (Any,Seq[WL])
+  def traverse (in:AC, v:Any) : (Any,Seq[WL])
     
   override def toString : String = this.getClass().getSimpleName + "()"
 }
  
 /** may want to store some color here...or have the link do something */
 case class WL (val a:WA, val z:WA) extends razie.g.GLink[WA] { 
-  
 }
   
-
 /** starting to add syntax niceties, implementation-transparent */
 trait WfAct extends WA {
   def + (e:WfAct) = WfSeq (this,e)
   def | (e:WfAct) = WfPar (this,e)
+  
+  // simplified execution
+  def run (initialValue : Any) : Any = 
+    new Engine().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
 }
 

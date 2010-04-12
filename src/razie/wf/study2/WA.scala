@@ -2,7 +2,7 @@ package razie.wf.study2
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
+import razie.wf.{WfaState, ProcStatus, ProcState}
 
 //-------------------- engine/graph
 

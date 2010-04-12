@@ -2,10 +2,12 @@ package razie.wf.study3
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfActBase, WfaState, ProcStatus, ProcState}
+import razie.wf.{WfExec, WfaState, ProcStatus, ProcState}
 
 /** 
  * study 3 deals with return values: each acitivty just like scala, returns a value
+ * 
+ * this has introduced some uglies: wuif and waif instead of just wif...maybe I don't know scala well enough
  * 
  * also, should be so close it may end up being final
  * 
