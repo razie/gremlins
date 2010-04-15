@@ -9,7 +9,7 @@ import razie.wf.study4._
 
 class WfFunctionalTest extends JUnit3Suite {
 //  import razie.wf.study4.Wf._
-  import Wf._
+  import wf._
 
   lazy val wdefif1 = wif (2==1) {
      var lacc = ""
@@ -24,9 +24,9 @@ class WfFunctionalTest extends JUnit3Suite {
      lacc += "..."
      lacc
   } welse 
-     waf {_.toString + " it's"} + 
-     waf {s:Any => s.toString + " false"} + 
-     waf {s:Any => s.toString + " ..."} 
+     wa {_.toString + " it's"} + 
+     wa {s:Any => s.toString + " false"} + 
+     wa {s:Any => s.toString + " ..."} 
 
   def testIf1 = expect ("1 it's false ...") { wdefif1 run 1 }
   def testIf2 = expect ("it's true 2 ...") { wdefif1 run 2 }

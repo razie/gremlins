@@ -9,6 +9,8 @@ import razie.wf.{WfaState, ProcStatus, ProcState}
 /** 
  * the workflow is modelled as a graph of activities connected by links/dependencies.
  * 
+ * This is the basic node in the graph: an activity waiting to be traversed/executed. 
+ * 
  * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
 abstract case class WA () extends razie.g.GNode[WA, WL] with WfaState {
@@ -18,7 +20,16 @@ abstract case class WA () extends razie.g.GNode[WA, WL] with WfaState {
   def activities : Seq[WA] // next activities - note that this is not containment, is it?
   def links : Seq[WL] // links 
    
-  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
+  /** the engine is traversing the graph...similar to executing it.
+   * 
+   * executing these means maybe doing something (in=>out) AND figuring out who's next
+   * 
+   * @param in the current context, containing variables objects whatnot
+   * @param v the current value (in good scala tradition, each statemnt returns a value - this is basically the preceeding value)- 
+   * @return (my value, next activities - the links I think should go next). 
+   * 
+   * NOTE that the links returned must be one of the static links - you can't make up new ones...otherwise I cannot recover state from storage?
+   */
   def traverse (in:AC, v:Any) : (Any,Seq[WL])
     
   override def toString : String = this.getClass().getSimpleName + "()"
@@ -35,6 +46,5 @@ trait WfAct extends WA {
   
   // simplified execution
   def run (initialValue : Any) : Any = 
-    new Engine().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
+    Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
 }
-

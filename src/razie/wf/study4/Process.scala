@@ -10,10 +10,10 @@ import razie.wf.{WfaState, ProcStatus, ProcState}
  * a process thread encapsulates the state of a running workflow branch . You can see this as an 
  * actor as well
  */
-class ProcessThread (val start:WA, val ctx:AC, val startV:Any) { 
+class ProcessThread (val start:WA, val ctx:AC, val startValue:Any) { 
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
      
-  var currV:Any = startV
+  var currV:Any = startValue
      
   // the activities in progress these are all in parallel
   var currAct : WA = null
@@ -99,4 +99,8 @@ class Engine {
   }
      
   def checkpoint () {}
+}
+
+object Engines {
+  def apply () = new Engine()
 }

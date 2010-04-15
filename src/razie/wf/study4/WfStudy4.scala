@@ -2,7 +2,7 @@ package razie.wf.study4
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfExec, WfaState, ProcStatus, ProcState}
+import razie.wf.{WfExec, WfaState, ProcStatus, ProcState, WfLib}
 
 /** 
  * study 4's main goal is to settle the underlying structure, based on matching
@@ -14,15 +14,18 @@ import razie.wf.{WfExec, WfaState, ProcStatus, ProcState}
  * 
  * @author razvanc
  */
-object Wf {
+object wf extends WfLib {
    
   //----------------- base activitities
    
   // TODO this doesn't work if implicit...see ScaBug1
-  implicit def wf  (f : => Unit) = WfScala (()=>f)
-  implicit def wf  (f : => Any) = WfScalaV0 (()=>f)
-  implicit def waf (f : Any => Any) = WfScalaV1 ((x)=>f(x))
+  implicit def w   (f : => Unit) = WfScala (()=>f)
+  implicit def w   (f : => Any) = WfScalaV0 (()=>f)
+  implicit def wa  (f : Any => Any) = WfScalaV1 ((x)=>f(x))
   implicit def wau (f : Any => Unit) = WfScalaV1u ((x)=>f(x))
+  
+  def apply (f : => Unit) = w(f)
+  def apply (f : => Any) = w(f)
   
   //----------------- if
   
@@ -47,8 +50,8 @@ object Wf {
   
   def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 (()=>expr, f.l)
 //  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
-  def wcase2[T] (t:T) (f: => Unit) = new WfCase2[T](t)(wf(f))
-  def wcase2[T] (cond: T => Boolean) (f: => Unit) = new WfCase2p[T](cond)(wf(f))
+  def wcase2[T] (t:T) (f: => Unit) = new WfCase2[T](t)(w(f))
+  def wcase2[T] (cond: T => Boolean) (f: => Unit) = new WfCase2p[T](cond)(w(f))
   // this should work because it is only called when the value actually matches...
   def wcase2a[T <: Any] (f: T => Unit) = new WfCase2a[T](wau(x => f(x.asInstanceOf[T])))
   def wcase2a[T <: Any] (cond:T => Boolean)(f: T => Unit) = new WfCase2ap[T](cond)(wau(x => f(x.asInstanceOf[T])))
@@ -59,7 +62,8 @@ object Wf {
   def wcase[T] (cond: T => Boolean) (f: => Unit) = wcase2(cond)(f)
   def wcasea[T <: Any] (f: T => Unit) = wcase2a(f)
   def wcaseany (f: WfAct) = wcaseany2(f)
-  
+
+  def seq (a : WfAct*) = new WfSeq (a:_*)
 }
 
   /** simple activities just do their thing */
@@ -74,6 +78,13 @@ object Wf {
     }
   }
 
+  /** simple activities just do their thing */
+  case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec { 
+    override def exec (in:AC, prevValue:Any) = wrapped.exec(in, prevValue)
+    override def toString : String = "wf." + wrapped.wname
+    override def wname = wrapped.wname
+  }
+
   /** note that this proxy is stupid... see WfElse to understand why... */
   case class WfProxy (a:WfAct, var l:WL*) extends WfSimple { 
 //    override def exec (in:AC, v:Any) : Any = a.exec(in, v)
@@ -82,18 +93,22 @@ object Wf {
     
     // if the depy was from a to someone, update it to be this to someone...?
     override def links : Seq[WL] = l.map(x=>{if (x.a == a) WL(this, x.z) else x})
+    
+    override def toString : String = 
+      this.getClass().getSimpleName + "()"
   }
 
   /** a sequence contains a list of proxies */
   case class WfSeq (a:WfAct*) extends WfAct {
-    var _activities : List[WfAct] = build
+    var _activities : List[WfAct] = build_Wtf_?
     var _links : List[WL] = _activities.firstOption.map(WL(this,_)).toList
     
     override def activities = _activities
     override def links = _links
 
     // wrap each in a proxy and link them in sequence
-    def build : List[WfAct] = {
+    // named this way in amazement that ? was accepted...
+    def build_Wtf_? : List[WfAct] = {
       a.foldRight (Nil:List[WfAct])((x,l) => WfProxy(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
     }
    
@@ -111,7 +126,8 @@ object Wf {
        this
        }
   }
-  
+
+  /** fork-join. The end will wait for all processing threads to be done */
   case class WfPar (a:WfAct*) extends WfAct {
     override def activities : Seq[WA] = a
     override val links : Seq[WL] = a.map (x => WL(this,x))
@@ -334,7 +350,7 @@ case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends Wf
 //--------------------- samples
 
 object Wf4Main extends Application {
-   import Wf._
+   import wf._
 
    var acc = ""
 
@@ -369,13 +385,13 @@ object Wf4Main extends Application {
      lacc += "..."
      lacc
   } welse 
-     waf {_.toString + " it's"} + 
-     waf {s:Any => s.toString + " false"} + 
-     waf {s:Any => s.toString + " ..."} 
+     wa {_.toString + " it's"} + 
+     wa {s:Any => s.toString + " false"} + 
+     wa {s:Any => s.toString + " ..."} 
 
   // the trouble with this is that the branches are only known as it runs...can't see the defn
   lazy val match1 = wmatch1 ("stuka") {
-     wcase1 {case 1 => println ("matched 1")} +
+     wcase1 {case 1 => log ("matched 1")} +
      wcase1 {case 2 => println ("matched 2")} +
      wcase1 {case 3 => println ("matched 2")} +
      wcase1 {case 4 => println ("matched 2")} +
@@ -406,7 +422,7 @@ object Wf4Main extends Application {
     println ("")
     println ("Workflow is: " + w.mkString)
     acc += "Running: "
-    println (">>>>>>>> RESULT is " + new Engine().exec(w, razie.base.scripting.ScriptFactory.mkContext(), ""))
+    println (">>>>>>>> RESULT is " + Engines().exec(w, razie.base.scripting.ScriptFactory.mkContext(), ""))
     println (acc)
     println ("=========================================================")
   }
