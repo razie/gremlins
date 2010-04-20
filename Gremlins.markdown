@@ -35,25 +35,27 @@ One difference from other frameworks will be that of dissolving the barriers bet
 distribution and workflows. I see all preceeding techniques as steps, identifying patterns and leading us 
 here. 
 The only programming model worth learning is the workflow...the others are good maybe for a history class. 
-Although there is none, no false modesty was molested in the making of the above paragraph :))
+Disclaimer: although there is none, no false modesty was wasted in the making of the above paragraph :))
 
 So, what we need is:
+
 * generic graph-based processing engine
 Classes like <code>WA</code> and <code>WL</code> describe this level of the workflow.
 * engine cooperation API (so remote engines can coordinate sub-workflows)
 * graph template-ing engine
 * basic activity library
 * default/standard embedable container
+* default agent structure for distribution
 
-That's it! Sounds simple? As any other highly abstract concept, once explained it is immediately 
-obvious... especially to me: I spent soo much time thinking about this that once typed, 
-I'm now wondering why on earth it took me so long.
+That's it! 
 
    
 Context, environment
 --------------------
 
 All nodes in a workflow share the same context. Each node can modify the common context.
+
+TODO need to figure out exaclty how sub-workflow contexts interact.
 
 
 Actions and Actionables
@@ -68,7 +70,7 @@ message to an external system, making a WS call etc
 Concurrency
 -----------
 
-Concurrent programming takes into account that most of the time, the same resource is shared for different 
+Concurrent programming takes into account that most of the time, the same resource is shared for different  
 purposes, often at the same time. For instance, fighter jet computers tracking multiple bogies or amazon's
 ordering system handling multiple carts depleting the same book shelves, not to mention Google's robots 
 reading a gazillion pages from a gazillion servers with different response times.
@@ -76,6 +78,7 @@ reading a gazillion pages from a gazillion servers with different response times
 Things get pretty complicated very quickly when trying to express this concurrency.
 
 The "standard" approaches are:
+
 - shared state
 The classic model where processing threads share some state (like list of users). All kinds of constructs
 are used to manage concurrent access to state/resources. A monitor could wrap the logging system and lock 
@@ -90,23 +93,28 @@ While the first does have some visualization options, the second can at best pro
 abstract image in my head...although one can appreciate the late-binding flexibility of an actor system - 
 their communication paths could be re-wired at runtime.
 
+Also - concurrency also describes processes that occur concurrently, like the CCS where you have two processes
+in parallel P | Q.
 
-How does our workflow accomodate concurrency? 
+
+### How does our workflow model accomodate concurrency? 
+
 Well, for one, there's multiple worflows than run at the same time. 
 How many, for whom and what they do is unknown and as irrelevant as the number of threads.
 Inside the same workflow, a few execution threads can exist at the same time. Simply activating more links 
 from any node will spawn a few threads and when these meet in special "join" nodes, the threads merge 
 again.
 
-Concurrent programming will still be relevant for low-level programming. If you have shared resources, 
-you have the option of using any concurrent technique you like:
-- in the classic model you would use locks and other such contraptions - I recommend you use distributed 
-locks not just local, since workflows can migrate all over the place...
+If you have shared resources, you have the option of using any concurrent technique you like:
+
+- in the classic model you would use semaphores, locks, barriers and other such contraptions - 
+I recommend you use distributed locks not just local, since workflows can migrate all over the place...
 We will provide some simple implementations
 - in the actor model, you would simply use long-running actor workflows, which just listen for incoming 
 messages and process them
 
-While the shared context makes this resemble the classic concurrency model, message passing is also possible
+While the shared context makes this entire model resemble the classic concurrency model, message 
+passing is also possible
 between wofklows or between sub-workflows and especially between workflows and the outside environment.
 
 However, the workflow enforces a shift from thinking in semaphores to thinking in transactions. 
@@ -116,6 +124,7 @@ TODO will need to elaborate on that.
 ### Split/join
 
 NOTE there are two options I'm considering:
+
 1. special "split" node that will spawn threads and all other nodes can only activate 1 link at a time
 1. any node could spawn multiple links, automatically trigerring thread spawns
 
@@ -136,6 +145,7 @@ Asynchronous communication implies extremely late binding, flexibility and less 
 interacting parties.
 
 TODO document how we're addressing distribution:
+
 - remote gremlins
 - gremlin API
 - message passing primitives
@@ -175,9 +185,10 @@ Wait, there's more Gremlins
 ===========================
 
 I noticed there's at least another project on github called "Gremlin" and interestingly, it deals with 
-graphs as well...it is probable that we both have the same vivid imagination :)
+graphs and programming as well...it is probable that we both have the same vivid imagination :)
 
-I've always thought of this distributed workflow as a bunch of gremlins, chewing different problems up all
+I've always thought of this distributed workflow as a bunch of gremlins, replicatinv themselves and chewing 
+different problems up all
 over the place and I don't want to change it just because of a name, so, as hard as it may turn out to be, 
 I'll keep this name, invoking the power of visualization.
    
@@ -185,23 +196,24 @@ I'll keep this name, invoking the power of visualization.
 Why?
 ====
 
-I know there's tons of workflow products but none complete, to my liking.
-
 While different functionalities like Web Services Choreography can be grafted onto existing frameworks 
 like adding libraries to Java, I feel that a new framework of concepts and constructs is needed, to 
 become the fabric for all the new constructs. 
-TODO reword this.
 
 While the BPM guys claim "we've got it" they're right. But so are the BPEL boys and the XPDL gals and we're 
 left to pick up the pieces in all and any language. There is no low-level workflow that we can use and 
 all we can do is use all kinds of graphic designers, design all kinds of XML representation and interact 
 with 3rd party engines which require yet more integration to interact with 3rd party systems.
 
-There is an inner beauty to the simplicity of Lisp, where everything is a function...or Smalltalk where
-everything is an object (except turtles, you see).
+At each step you bump into incompatible interfaces, incomprehensible states, yet another standard and so
+on.
 
-That's where Scala comes in: as a natively scalable language, it gives us the chance to setup this gremlin 
-fabric where we can write both small (1 liner) as well as big (inter-enterprise) workflows...and focus on 
-learning a small set of patterns and use a lot of built-in functionality that the fabric has to offer.
+There is an inner beauty to the simplicity of Lisp, where everything is a function...or Smalltalk where
+everything is an object (except when there's turtles, you see).
+
+That's where Scala comes in: as a natively scalable language, it gives us the chance to setup this 
+gremlins fabric where we can write both small (1 liner) as well as big (inter-enterprise) workflows...
+and focus on learning a small set of patterns and use a lot of built-in functionality that the 
+fabric has to offer.
 
 

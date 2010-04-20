@@ -349,7 +349,7 @@ case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends Wf
 
 //--------------------- samples
 
-object Wf4Main extends Application {
+object Wf5Main extends Application {
    import wf._
 
    var acc = ""
