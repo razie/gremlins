@@ -34,15 +34,16 @@ structures.
 One difference from other frameworks will be that of dissolving the barriers between concurrent programming,
 distribution and workflows. I see all preceeding techniques as steps, identifying patterns and leading us 
 here. 
-The only programming model worth learning is the workflow...the others are good maybe for a history class.
+The only programming model worth learning is the workflow...the others are good maybe for a history class. 
+Although there is none, no false modesty was molested in the making of the above paragraph :))
 
 So, what we need is:
-- generic graph-based processing engine
+* generic graph-based processing engine
 Classes like <code>WA</code> and <code>WL</code> describe this level of the workflow.
-- engine cooperation API (so remote engines can coordinate sub-workflows)
-- graph template-ing engine
-- basic activity library
-- default/standard embedable container
+* engine cooperation API (so remote engines can coordinate sub-workflows)
+* graph template-ing engine
+* basic activity library
+* default/standard embedable container
 
 That's it! Sounds simple? As any other highly abstract concept, once explained it is immediately 
 obvious... especially to me: I spent soo much time thinking about this that once typed, 

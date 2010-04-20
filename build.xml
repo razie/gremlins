@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project basedir="." default="build" name="razwf">
+<project basedir="." default="build" name="gremlins">
     <import file="../razbase/base-build.xml"/>
 
     <path id="depy.path">

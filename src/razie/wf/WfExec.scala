@@ -2,6 +2,7 @@ package razie.wf
 
 import razie.base.ActionContext
 
+/** basic executable/actionable */
 trait WFunc[T] { // extends PartialFunc ?
   def exec (in:ActionContext, prevValue:Any) : T
 }
