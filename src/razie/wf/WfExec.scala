@@ -27,7 +27,7 @@ class WfLib {
   def assign (name:String) (value: =>Any) = me wrap new WfAssign (name)((x)=>value)
  
   // wraps an WfExec into a WfAct...customize this per implementation
-  private def wrap (e:WfExec) = razie.wf.study4.WfWrapper (e)
+  private def wrap (e:WfExec) = razie.wf.study5.WfWrapper (e)
 }
 
 class WfAssign (name:String) (v: Any => Any) extends WfExec {
