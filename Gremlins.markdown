@@ -14,7 +14,7 @@ Razie's Workflow Vision: Gremlins
 
 When I think "workflow" I imagine a graph of activities of different kinds, through which a processing
 engine carves a path. As opposed to just being there for fun, these nodes actually do stuff, so they look 
-much like a bunch of (more or less chaotic) Gremlins.
+much like a bunch of (more or less chaotic) Gremlins, chewing away at a piece of a problem.
 
 Some activities carry out actual processing or communication while others merely figure out what path to
 follow next and yet others are there just for structure. Some complete immediately while some take their 

@@ -2,15 +2,18 @@ package razie.wf.study5
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfExec, WfaState, ProcStatus, ProcState, WfLib}
 
 /** 
- * study 4's main goal is to settle the underlying structure, based on matching
+ * study 5 will settle the underlying workflow engine - there were some details not working in study4,
+ * especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
+ * up the simplicity of the traversing engine.
  * 
- * also, should be so close it may end up being final
+ * I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect 
+ * the graph through its actions...this way there's no change in the engine - it remains simple graph 
+ * traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced 
+ * with WfScope)
  * 
- * 1. separate exec into WfExec from traverse in WA. traverse () is graph processor whikle exec () 
- * is actual actions
+ * I added the joins or "xxxEnd" nodes, the WfScope
  * 
  * @author razvanc
  */
@@ -63,18 +66,33 @@ object wf extends WfLib {
   def wcasea[T <: Any] (f: T => Unit) = wcase2a(f)
   def wcaseany (f: WfAct) = wcaseany2(f)
 
-  def seq (a : WfAct*) = new WfSeq (a:_*)
+  def seq (a : WfAct*) = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
+     if (a.size == 1 && a.first.glinks.isEmpty) a.first
+     else new WfSeq (a:_*)
+    
+  /** bound this subgraph in a scope, if needed */
+  def bound (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+     if (a.glinks.isEmpty) a
+     else new WfScope (a)
+     
+  implicit val linkFactory = (x,y) => WL(x,y)
+  
+  /** bound this subgraph in a scope, if needed */
+  def bound (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+     if (a.glinks.isEmpty) {
+        l map (a +-> _)
+        a
+     } else 
+        new WfScope (a, l:_*)
+     
 }
 
   /** simple activities just do their thing */
   case class WfSimple extends WfAct { 
-    override def activities : Seq[WA] = Nil
-    override def links : Seq[WL] = Nil
-   
     /** executing these means maybe doing something (in=>out) AND figuring out who's next */
     override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
-       case a : WfExec => (a.exec(in, v), links)
-       case _ => (v,links)
+       case a : WfExec => (a.exec(in, v), glinks)
+       case _ => (v,glinks)
     }
   }
 
@@ -85,14 +103,40 @@ object wf extends WfLib {
     override def wname = wrapped.wname
   }
 
+  //------------------- begin / end subgraph
+
+  case class WfStart (a:WfAct*) extends WfSimple {  a map (this --> _) }
+
+  case class WfEnd (a:WfAct*) extends WfSimple { 
+    // find all leafs and connect them to me
+    (a flatMap ( x => razie.g.GStuff.filterNodes[WA,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
+  }
+
+  /** 
+   * the new proxy: contains a sub-graph.
+   * will point to the entry point of its sub-graph and connect the end of it to itself.
+   */
+  case class WfScope (aa:WfAct, var l:WL*) extends WfStart (aa) { 
+//    this --> WfStart (a)
+    WfScopeEnd (aa, l:_*)
+  }
+
+  /** 
+   * special activity - ends a scope and points to where the scope was meant to point to
+   */
+  case class WfScopeEnd (s:WfAct, var l:WL*) extends WfEnd (s) { 
+    glinks = l.map(x=>{if (x.a == s) WL(this, x.z) else x})
+  }
+
+
   /** note that this proxy is stupid... see WfElse to understand why... */
   case class WfProxy (a:WfAct, var l:WL*) extends WfSimple { 
+    // if the depy was from a to someone, update it to be this to someone...?
+    glinks = l.map(x=>{if (x.a == a) WL(this, x.z) else x})
+    
 //    override def exec (in:AC, v:Any) : Any = a.exec(in, v)
     /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (a.traverse(in, v)._1, links)
-    
-    // if the depy was from a to someone, update it to be this to someone...?
-    override def links : Seq[WL] = l.map(x=>{if (x.a == a) WL(this, x.z) else x})
+    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (a.traverse(in, v)._1, glinks)
     
     override def toString : String = 
       this.getClass().getSimpleName + "()"
@@ -100,40 +144,37 @@ object wf extends WfLib {
 
   /** a sequence contains a list of proxies */
   case class WfSeq (a:WfAct*) extends WfAct {
-    var _activities : List[WfAct] = build_Wtf_?
-    var _links : List[WL] = _activities.firstOption.map(WL(this,_)).toList
+    gnodes = build_Wtf_?
+    glinks = gnodes.firstOption.map(WL(this,_)).toList
     
-    override def activities = _activities
-    override def links = _links
-
     // wrap each in a proxy and link them in sequence
     // named this way in amazement that ? was accepted...
     def build_Wtf_? : List[WfAct] = {
-      a.foldRight (Nil:List[WfAct])((x,l) => WfProxy(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
+      a.foldRight (Nil:List[WfAct])((x,l) => wf.bound(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
     }
    
     /** does nothing just returns the first in list */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v, links)
+    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v, glinks)
    
     // to avoid seq(seq(t)) we redefine to just link to what i already have
     override def + (e:WfAct) = {
        val p = WfProxy (e)
-       if (_links.lastOption.isDefined)
-         _activities.lastOption.map(a=>a.asInstanceOf[WfProxy].l = WL(a,p))
+       if (glinks.lastOption.isDefined)
+         gnodes.lastOption.map(a=>a.asInstanceOf[WfProxy].l = WL(a,p))
        else 
-         _links = List(WL(this,p)) 
-       _activities = _activities ::: List(p) 
+         glinks = List(WL(this,p)) 
+       gnodes = gnodes.toList ::: List(p) 
        this
        }
   }
 
   /** fork-join. The end will wait for all processing threads to be done */
   case class WfPar (a:WfAct*) extends WfAct {
-    override def activities : Seq[WA] = a
-    override val links : Seq[WL] = a.map (x => WL(this,x))
+    gnodes = a
+    glinks = a.map (x => WL(this,x))
    
     /** does nothing just returns the spawns */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) =  (v, links)
+    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) =  (v, glinks)
   }
 
   /** scala code with no input nor return values */
@@ -192,8 +233,8 @@ object wf extends WfLib {
   
 /** match AT MOST one branch */
 case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfAct {
-  override def activities : Seq[WA] = Nil
-  override def links : Seq[WL] = e.l.map (WL(this,_))
+  gnodes = Nil
+  glinks = e.l.map (WL(this,_))
    
   /** return either branch, depending on cond */
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
@@ -201,9 +242,9 @@ case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfAct {
     var ret:Seq[WL] = Nil
     
 //    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
-    for (i <- Range (0, links.size-1)) 
+    for (i <- Range (0, glinks.size-1)) 
       if (ret.isEmpty) {
-        val r = links(i).z.asInstanceOf[WfCase1].apply(e).map (WL(this,_))
+        val r = glinks(i).z.asInstanceOf[WfCase1].apply(e).map (WL(this,_))
         if (! r.isEmpty)
           ret = r.toList
       }
@@ -216,7 +257,7 @@ case class WfGuard1 (_expr : () => Any, _e:WfCases1) extends WfMatch1 (_expr, _e
   /** return either branch, depending on cond */
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
     val e = expr()
-    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
+    (v, glinks.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
   }
 }
 
@@ -244,13 +285,14 @@ protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
 //-------------------------------matchers 2
 
 class WfCase2[T <: Any] (val t : T) (a:WfAct) extends WfProxy(a) { 
+   glinks = WL(this,a) :: Nil
+   
    def apply(value: Any) : Option[WfAct] =
      if (value == null || !value.isInstanceOf[T] || value != t)
        None
      else 
        Some(a)
        
-   override def links : Seq[WL] = WL(this,a) :: Nil
   
    def + (b:WfCase2[_ <: Any]) : WfCases2 = new WfCases2 (List(this) ::: List(b))
    def + (b:List[WfCase2[_ <: Any]]) : WfCases2 = new WfCases2(List(this) ::: b)
@@ -290,11 +332,12 @@ class WfCaseAny2 (a:WfAct) extends WfCase2(null)(a) {
 }
 
 abstract class WfMatchBase extends WfAct {
+  gnodes = Nil
+  glinks = branches.map (WL(this,_))
+  
   val expr : () => Any
   val branches : Seq[WfCase2[_]]
   
-  override def activities : Seq[WA] = Nil
-  override def links : Seq[WL] = branches.map (WL(this,_))
 }
 
 case class WfMatch2 (
@@ -307,9 +350,9 @@ case class WfMatch2 (
     var ret:Seq[WL] = Nil
     
 //    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
-    for (i <- Range (0, links.size-1)) 
+    for (i <- Range (0, glinks.size-1)) 
       if (ret.isEmpty) {
-        val r = links(i).z.asInstanceOf[WfCase2[_]].apply(e).map (WL(this,_))
+        val r = glinks(i).z.asInstanceOf[WfCase2[_]].apply(e).map (WL(this,_))
         if (! r.isEmpty)
           ret = r.toList
       }
@@ -321,17 +364,17 @@ case class WfMatch2 (
 //---------------- if
 
 case class WfElse (t:WfAct)  extends WfProxy (t) {
-  override def links : Seq[WL] = WL(this,t) :: Nil
+  glinks = WL(this,t) :: Nil
 }
   
 case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends WfAct {
-  override def activities : Seq[WA] = List(t) ::: e.toList
-  override def links : Seq[WL] = List (WL(this,t)) ::: e.map(WL(this,_)).toList
+  gnodes = List(t) ::: e.toList
+  glinks = List (WL(this,t)) ::: e.map(WL(this,_)).toList
    
   /** return either branch, depending on cond */
   def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
     if (cond(v)) 
-      (v, links.first :: Nil)
+      (v, glinks.first :: Nil)
     else
       (v, e.firstOption.map(WL(this,_)).toList)
         

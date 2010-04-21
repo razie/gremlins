@@ -2,7 +2,6 @@ package razie.wf.study2
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.{WfaState, ProcStatus, ProcState}
 
 /** 
  * in this version, I'm adding the underlying structure for an engine to run through. this gives

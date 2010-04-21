@@ -3,7 +3,6 @@ package razie.wf.study4
 import scala.util.parsing.combinator._
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf._
 
 /** version with combinator parsers */
 class WCF extends JavaTokenParsers {
