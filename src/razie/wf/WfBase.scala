@@ -67,28 +67,25 @@ import razie.base.{ActionContext => AC}
   
   /** a sequence contains a list of proxies */
   case class WfSeq (a:WfAct*) extends WfAct {
-    gnodes = build_Wtf_?
+    // wrap each in a proxy and link them in sequence
+    gnodes = 
+      a.foldRight (Nil:List[WfAct])((x,l) => wf.bound(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
     glinks = gnodes.firstOption.map(WL(this,_)).toList
     
-    // wrap each in a proxy and link them in sequence
-    // named this way in amazement that ? was accepted...
-    def build_Wtf_? : List[WfAct] = {
-      a.foldRight (Nil:List[WfAct])((x,l) => wf.bound(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
-    }
    
     /** does nothing just returns the first in list */
     override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v, glinks)
    
     // to avoid seq(seq(t)) we redefine to just link to what i already have
     override def + (e:WfAct) = {
-       val p = WfProxy (e)
-       if (glinks.lastOption.isDefined)
-         gnodes.lastOption.map(a=>a.asInstanceOf[WfProxy].l = WL(a,p))
-       else 
-         glinks = List(WL(this,p)) 
-       gnodes = gnodes.toList ::: List(p) 
-       this
-       }
+      val p = wf.bound(e)
+      if (glinks.lastOption.isDefined)
+        gnodes.last --> p
+      else 
+       glinks = List(WL(this,p)) 
+     gnodes = gnodes.toList ::: List(p) 
+     this
+     }
   }
 
   /** TODO fork-join. The end will wait for all processing threads to be done */
