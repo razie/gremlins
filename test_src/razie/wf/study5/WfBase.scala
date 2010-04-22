@@ -3,89 +3,7 @@ package razie.wf.study5
 import razie.AA
 import razie.base.{ActionContext => AC}
 
-/** 
- * study 5 will settle the underlying workflow engine - there were some details not working in study4,
- * especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
- * up the simplicity of the traversing engine.
- * 
- * I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect 
- * the graph through its actions...this way there's no change in the engine - it remains simple graph 
- * traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced 
- * with WfScope)
- * 
- * I added the joins or "xxxEnd" nodes, the WfScope
- * 
- * @author razvanc
- */
-object wf extends WfLib {
-   
-  //----------------- base activitities
-   
-  // TODO this doesn't work if implicit...see ScaBug1
-  implicit def w   (f : => Unit) = WfScala (()=>f)
-  implicit def w   (f : => Any) = WfScalaV0 (()=>f)
-  implicit def wa  (f : Any => Any) = WfScalaV1 ((x)=>f(x))
-  implicit def wau (f : Any => Unit) = WfScalaV1u ((x)=>f(x))
-  
-  def apply (f : => Unit) = w(f)
-  def apply (f : => Any) = w(f)
-  
-  //----------------- if
-  
-  type Cond0 = Unit => Boolean
-  type Cond1 = Any => Boolean
-
-  implicit def wc0 (cond : => Boolean) : Cond1 = (x) => cond
-  
-  def wif  (cond : Cond1, t:WfAct)        = WfIf (cond, t)
-  def wuif (cond : Cond1) (f: => Unit)    = WfIf (cond, WfScala(()=>f))
-  def wif  (cond : Cond1) (f: => Any)     = WfIf (cond, WfScalaV0(()=>f))
-  def waif (cond : Cond1) (f: Any => Any) = WfIf (cond, WfScalaV1((x)=>f(x)))
-  def wauif (cond : Cond1) (f: Any => Unit)= WfIf (cond, WfScalaV1((x)=>f(x)))
-  
-  //----------------- match
-  
-  // def wmatch1 (expr : =>Any) (f: PartialFunction[Any, Unit]) = WfMatch1 (()=>expr, WfCaseB (()=>expr, (x:Any)=>f.apply(x)))
-  def wmatch1 (expr : =>Any) (f: WfCases1) = WfMatch1 (()=>expr, f)
-  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
-  def wcase1 (f: => PartialFunction[Any, WfAct]) = new WfCase1(f)
-  def wcaseany1 (f: WfAct) = new WfCaseAny1(f)
-  
-  def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 (()=>expr, f.l)
-//  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
-  def wcase2[T] (t:T) (f: => Unit) = new WfCase2[T](t)(w(f))
-  def wcase2[T] (cond: T => Boolean) (f: => Unit) = new WfCase2p[T](cond)(w(f))
-  // this should work because it is only called when the value actually matches...
-  def wcase2a[T <: Any] (f: T => Unit) = new WfCase2a[T](wau(x => f(x.asInstanceOf[T])))
-  def wcase2a[T <: Any] (cond:T => Boolean)(f: T => Unit) = new WfCase2ap[T](cond)(wau(x => f(x.asInstanceOf[T])))
-  def wcaseany2 (f: WfAct) = new WfCaseAny2(f)
-  
-  def wmatch (expr : =>Any) (f: WfCases2) = wmatch2 (expr)(f)
-  def wcase[T] (t:T) (f: => Unit) = wcase2(t)(f)
-  def wcase[T] (cond: T => Boolean) (f: => Unit) = wcase2(cond)(f)
-  def wcasea[T <: Any] (f: T => Unit) = wcase2a(f)
-  def wcaseany (f: WfAct) = wcaseany2(f)
-
-  def seq (a : WfAct*) = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
-     if (a.size == 1 && a.first.glinks.isEmpty) a.first
-     else new WfSeq (a:_*)
-    
-  /** bound this subgraph in a scope, if needed */
-  def bound (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
-     if (a.glinks.isEmpty) a
-     else new WfScope (a)
-     
-  implicit val linkFactory = (x,y) => WL(x,y)
-  
-  /** bound this subgraph in a scope, if needed */
-  def bound (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope
-     if (a.glinks.isEmpty) {
-        l map (a +-> _)
-        a
-     } else 
-        new WfScope (a, l:_*)
-     
-}
+//-------------------------------- basic activities
 
   /** simple activities just do their thing */
   case class WfSimple extends WfAct { 
@@ -128,7 +46,6 @@ object wf extends WfLib {
     glinks = l.map(x=>{if (x.a == s) WL(this, x.z) else x})
   }
 
-
   /** note that this proxy is stupid... see WfElse to understand why... */
   case class WfProxy (a:WfAct, var l:WL*) extends WfSimple { 
     // if the depy was from a to someone, update it to be this to someone...?
@@ -142,6 +59,8 @@ object wf extends WfLib {
       this.getClass().getSimpleName + "()"
   }
 
+  //------------------------------- seq / par
+  
   /** a sequence contains a list of proxies */
   case class WfSeq (a:WfAct*) extends WfAct {
     gnodes = build_Wtf_?
@@ -388,86 +307,4 @@ case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends Wf
      }
      this
    }
-}
-
-//--------------------- samples
-
-object Wf5Main extends Application {
-   import wf._
-
-   var acc = ""
-
-  // test
-  lazy val if1 = wuif (1==1) {
-     acc += "it's "
-     acc += "true "
-     acc += "..."
-  } 
-  
-  lazy val if2 = wif (1==2) {
-     var lacc = ""
-     lacc += "it's "
-     lacc += "true "
-     lacc += "..."
-     lacc
-  } welse 
-     wf {println ("it's")} + 
-     wf {println ("false")} +
-     wf {println ("!!!")}
-  
-  lazy val if3a = wif (1==2) {
-     var lacc = ""
-     lacc += "it's "
-     lacc += "true "
-     lacc += "..."
-     lacc
-  } welse wif (3==2) {
-     var lacc = ""
-     lacc += "it's "
-     lacc += "true "
-     lacc += "..."
-     lacc
-  } welse 
-     wa {_.toString + " it's"} + 
-     wa {s:Any => s.toString + " false"} + 
-     wa {s:Any => s.toString + " ..."} 
-
-  // the trouble with this is that the branches are only known as it runs...can't see the defn
-  lazy val match1 = wmatch1 ("stuka") {
-     wcase1 {case 1 => log ("matched 1")} +
-     wcase1 {case 2 => println ("matched 2")} +
-     wcase1 {case 3 => println ("matched 2")} +
-     wcase1 {case 4 => println ("matched 2")} +
-     wcase1 {case s:String => println ("matched s=" + s)} +
-     wcase1 {case l@List(1,2,3) => println ("matched list " + l)} +
-     wcaseany1 {println ("matched none")}
-  }
-  
-  lazy val match2 = wmatch2 ("stuka") {
-     wcase2[Int] (1) {println ("matched 1")} +
-     wcase2[Int] (2) {println ("matched 2")} +
-     wcase2 ("Gigi") {println ("matched Gigi")} +
-     wcase2a {s:String => println ("matched s=" + s)} +
-     wcase2 (List(1,2,3)) {println ("matched list 1,2,3")} +
-     wcase2  {l:Seq[Int] => l(2) == 2} {println ("matched list with secnod elem 2")} +
-     wcase2a {l:Seq[Int] => l == List(1,2,3)} {l:Seq[Int] => println ("matched list " + l)} +
-     wcaseany2 {println ("matched none")}
-  }
-  
-  this e if1
-  this e if2
-  this e if3a
-  this e match1
-  this e match2
-  
-  def e (w : WfAct) = {
-    acc = ""
-    println ("")
-    println ("Workflow is: " + w.mkString)
-    acc += "Running: "
-    println (">>>>>>>> RESULT is " + Engines().exec(w, razie.base.scripting.ScriptFactory.mkContext(), ""))
-    println (acc)
-    println ("=========================================================")
-  }
-  
 }

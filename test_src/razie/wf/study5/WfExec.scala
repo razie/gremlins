@@ -15,20 +15,16 @@ trait WfExec extends WFunc[Any] {
             def wname : String = "?"
 }
 
-/** leaf/basic workflow action library */
-object wfLib extends WfLib {
-}
-
-class WfLib { me =>
+abstract class WfLib[T] { me =>
 //  val me = this
-  
+ 
   def nop = me wrap new WfExec { override def execu() = {}; override def wname = "nop" }
   def log (m: => String) = me wrap new WfLog ((x,y)=>m)
   def log (m: (ActionContext, Any)=> String) = me wrap new WfLog (m)
   def assign (name:String) (value: =>Any) = me wrap new WfAssign (name)((x)=>value)
  
   // wraps an WfExec into a WfAct...customize this per implementation
-  private def wrap (e:WfExec) = razie.wf.study5.WfWrapper (e)
+  def wrap (e:WfExec) : T
 }
 
 class WfAssign (name:String) (v: Any => Any) extends WfExec {

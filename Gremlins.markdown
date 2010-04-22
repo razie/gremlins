@@ -49,6 +49,11 @@ Classes like <code>WA</code> and <code>WL</code> describe this level of the work
 
 That's it! 
 
+Well, then there's
+
+* content migration API (script/workflow/code)
+* modularity (OSGI)
+
    
 Context, environment
 --------------------
@@ -81,11 +86,12 @@ The "standard" approaches are:
 
 - shared state
 The classic model where processing threads share some state (like list of users). All kinds of constructs
-are used to manage concurrent access to state/resources. A monitor could wrap the logging system and lock 
-it for the duration of different calls.
+are used to manage concurrent access to state/resources. A Monitor could wrap the logging system and lock 
+it for the duration of different calls, while a Barrier can wait for all missiles to hit their targets before
+assesment...
 - message passing
-Independent stateful or stateless "actors" that can respond to messages. All state is encapsulated in the messages queued for 
-all actors at any one time... 
+Independent stateful or stateless "actors" that can respond to messages. All state is encapsulated in the 
+messages queued for all actors at any one time... 
 An actor could wrap the logging system and process log requests as they arrive as messages. If there would
 be any result, it would send that as a message to another actor.
 
@@ -94,7 +100,7 @@ abstract image in my head...although one can appreciate the late-binding flexibi
 their communication paths could be re-wired at runtime.
 
 Also - concurrency also describes processes that occur concurrently, like the CCS where you have two processes
-in parallel P | Q.
+in parallel P | Q...in this case, the shared resource is simply the time ;)
 
 
 ### How does our workflow model accomodate concurrency? 
@@ -135,8 +141,8 @@ Since we have to use a special "join" node to merge threads, there is a symetric
 Distribution
 ------------
 
-Distributed programming deals with the distribution of resources and programs all over a network. The major
-difference is that communication is no longer guaranteed and response times vary.
+Distributed programming deals with the distribution of resources and programs all over a network. 
+The major difference is that communication is no longer guaranteed and response times vary.
 
 The main concept to master at this point is "asynchronous". The actor model described above naturally 
 resembles a distributed system and is very apt at being distributed, because of the embedded asynchronicity.
@@ -156,29 +162,11 @@ Workflow
 --------
 
 
-Requirements
-============
-
-The following are issues normally addressed
-
-
-Design
-======
-
-There are a few layers and components here:
-
-- simple graph structures
-- workflow add-on
-- actions (actionables)
-- engine
-
-The first layer is the basic graph/link structures. These are inherited from <pre>razie.g.{GNode,GLink}</pre>.
-
-
-How Gremlins take over the world
-=======================================
+How the Gremlins take over the world
+====================================
    
-If any software component out there starts to implement the GremlinsAPI for sub-process management.
+If all software components out there start to implement the GremlinsAPI for sub-process management, the
+gremlins will spread like wildfire and take over the world. Then they process themselves into oblivion.
 
 
 Wait, there's more Gremlins
@@ -187,26 +175,27 @@ Wait, there's more Gremlins
 I noticed there's at least another project on github called "Gremlin" and interestingly, it deals with 
 graphs and programming as well...it is probable that we both have the same vivid imagination :)
 
-I've always thought of this distributed workflow as a bunch of gremlins, replicatinv themselves and chewing 
-different problems up all
-over the place and I don't want to change it just because of a name, so, as hard as it may turn out to be, 
-I'll keep this name, invoking the power of visualization.
+I've always thought of this distributed workflow as a bunch of gremlins, replicating themselves and 
+chewing different problems up all over the place and I don't want to change it just because of a name, 
+so, as hard as it may turn out to be, I'll keep this name, invoking the power of visualization.
    
 
-Why?
-====
+Why, oh why?
+============
 
 While different functionalities like Web Services Choreography can be grafted onto existing frameworks 
 like adding libraries to Java, I feel that a new framework of concepts and constructs is needed, to 
 become the fabric for all the new constructs. 
 
-While the BPM guys claim "we've got it" they're right. But so are the BPEL boys and the XPDL gals and we're 
-left to pick up the pieces in all and any language. There is no low-level workflow that we can use and 
+While the BPM guys claim "we've got it" they're right. But so are the BPEL boys and the XPDL gals while 
+the YAWL deserves a big "Hurah"....YET we're left to pick up the pieces in all and any language. 
+There is no low-level workflow that we can use and 
 all we can do is use all kinds of graphic designers, design all kinds of XML representation and interact 
-with 3rd party engines which require yet more integration to interact with 3rd party systems.
+with 3rd party engines which require yet more integration to interact with 3rd party systems, while at 
+every step, simplicity is sacrificed on the altar of...well, I don't know!
 
-At each step you bump into incompatible interfaces, incomprehensible states, yet another standard and so
-on.
+At each step you bump into incompatible interfaces, incomprehensible states, yet another standard, 
+n hundred page specifications, umpteen thousand attributes and so on.
 
 There is an inner beauty to the simplicity of Lisp, where everything is a function...or Smalltalk where
 everything is an object (except when there's turtles, you see).
@@ -215,5 +204,22 @@ That's where Scala comes in: as a natively scalable language, it gives us the ch
 gremlins fabric where we can write both small (1 liner) as well as big (inter-enterprise) workflows...
 and focus on learning a small set of patterns and use a lot of built-in functionality that the 
 fabric has to offer.
+
+Hence this project. Workflow is a big part of it.
+
+
+Preemptive answers to questions I made up
+-----------------------------------------
+
+### Why not use scripts?
+
+Q: Well - John can script to add the just-downloaded episode to an RSS and notify TVersity to pick it up,
+while Jane will just write Scala code for that...
+
+Well - yeah, but John can't see where his "flow" hit a snag, can't debug it and can't nicely discuss it, 
+share it, pause it or manage it remotely, can he?
+
+Jane is even worse off - she can't even run her code remotely unless the recompiled thing is manually 
+uploaded remotely...
 
 
