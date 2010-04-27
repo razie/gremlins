@@ -7,6 +7,7 @@ package razie.wf
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.wf.lib._
 
 //--------------------- samples
 
@@ -16,60 +17,60 @@ object Wf5Main extends Application {
    var acc = ""
 
   // test
-  lazy val if1 = wuif (1==1) {
+  lazy val if1 = wfs.wuif (1==1) {
      acc += "it's "
      acc += "true "
      acc += "..."
   } 
   
-  lazy val if2 = wif (1==2) {
+  lazy val if2 = wfs.wsif (1==2) {
      var lacc = ""
      lacc += "it's "
      lacc += "true "
      lacc += "..."
      lacc
   } welse 
-     wf {println ("it's")} + 
-     wf {println ("false")} +
-     wf {println ("!!!")}
+     wfs {println ("it's")} + 
+     wfs {println ("false")} +
+     wfs {println ("!!!")}
   
-  lazy val if3a = wif (1==2) {
+  lazy val if3a = wfs.wsif (1==2) {
      var lacc = ""
      lacc += "it's "
      lacc += "true "
      lacc += "..."
      lacc
-  } welse wif (3==2) {
+  } welse wfs.wsif (3==2) {
      var lacc = ""
      lacc += "it's "
      lacc += "true "
      lacc += "..."
      lacc
   } welse 
-     wa {_.toString + " it's"} + 
-     wa {s:Any => s.toString + " false"} + 
-     wa {s:Any => s.toString + " ..."} 
+     wfs.wa {_.toString + " it's"} + 
+     wfs.wa {s:Any => s.toString + " false"} + 
+     wfs.wa {s:Any => s.toString + " ..."} 
 
   // the trouble with this is that the branches are only known as it runs...can't see the defn
-  lazy val match1 = wmatch1 ("stuka") {
-     wcase1 {case 1 => log ("matched 1")} +
-     wcase1 {case 2 => println ("matched 2")} +
-     wcase1 {case 3 => println ("matched 2")} +
-     wcase1 {case 4 => println ("matched 2")} +
-     wcase1 {case s:String => println ("matched s=" + s)} +
-     wcase1 {case l@List(1,2,3) => println ("matched list " + l)} +
-     wcaseany1 {println ("matched none")}
+  lazy val match1 = wfs.wmatch1 ("stuka") {
+     wfs.wcase1 {case 1 => log ("matched 1")} +
+     wfs.wcase1 {case 2 => log ("matched 2")} +
+     wfs.wcase1 {case 3 => log ("matched 2")} +
+     wfs.wcase1 {case 4 => log ("matched 2")} +
+     wfs.wcase1 {case s:String => log ("matched s=" + s)} +
+     wfs.wcase1 {case l@List(1,2,3) => log ("matched list " + l)} +
+     wfs.wcaseany1 {log ("matched none")}
   }
   
   lazy val match2 = wmatch2 ("stuka") {
-     wcase2[Int] (1) {println ("matched 1")} +
-     wcase2[Int] (2) {println ("matched 2")} +
-     wcase2 ("Gigi") {println ("matched Gigi")} +
-     wcase2a {s:String => println ("matched s=" + s)} +
-     wcase2 (List(1,2,3)) {println ("matched list 1,2,3")} +
-     wcase2  {l:Seq[Int] => l(2) == 2} {println ("matched list with secnod elem 2")} +
-     wcase2a {l:Seq[Int] => l == List(1,2,3)} {l:Seq[Int] => println ("matched list " + l)} +
-     wcaseany2 {println ("matched none")}
+     wcase2[Int] (1) {log ("matched 1")} +
+     wcase2[Int] (2) {log ("matched 2")} +
+     wcase2      ("Gigi") {log ("matched Gigi")} +
+//     wfs.wcase2a {s:String => log ("matched s=" + s)} +
+     wcase2      (List(1,2,3)) {log ("matched list 1,2,3")} +
+     wcase2      {l:Seq[Int] => l(2) == 2} {log ("matched list with secnod elem 2")} +
+//     wcase2a     {l:Seq[Int] => l == List(1,2,3)} {l:Seq[Int] => log ("matched list " + l)} +
+     wcaseany2   {log ("matched none")}
   }
   
   this e if1

@@ -1,6 +1,6 @@
 package com.razie.pub.test
 
-import com.razie.pub.actionables.util.WinExec
+import razie.actionables.util.WinExec
 
 /** samples and tests for executing files - there are too many problems across platforms */
 object SampleWinExec {

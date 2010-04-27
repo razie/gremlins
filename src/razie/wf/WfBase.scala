@@ -7,6 +7,7 @@ package razie.wf
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.wf._
 
 //-------------------------------- basic activities
 
@@ -32,7 +33,7 @@ import razie.base.{ActionContext => AC}
 
   case class WfEnd (a:WfAct*) extends WfSimple { 
     // find all leafs and connect them to me
-    (a flatMap ( x => razie.g.GStuff.filterNodes[WA,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
+    (a flatMap ( x => razie.g.Graphs.filterNodes[WfAct,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
   }
 
   /** 
@@ -63,6 +64,56 @@ import razie.base.{ActionContext => AC}
       this.getClass().getSimpleName + "()"
   }
 
+  //------------------------- selector
+
+object Selblahblah {
+  def expr (in:AC, v:Any) = v
+}
+  
+/** selector activity - the basis for many other */
+case class WfSelOne (expr:(AC,Any) => Any = Selblahblah.expr) extends WfSimple { 
+
+  /** overwrite this if you wish...rather than pass it in */
+  def eval (in:AC, v:Any) : Any = expr (in, v)
+  
+  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+    val sel = expr (in, v)
+    (v, glinks.filter(l => l.isInstanceOf[WLV] && l.asInstanceOf[WLV].selector == sel).headOption.toList)
+  }
+    
+  /** par depy a -> (b,c) */
+  def --> [T <: Any] (z:Map[T,WfAct]) = {
+    glinks = z.map (p => new WLV(this,p._2,p._1)).toList
+    this
+  } 
+  /** par depy a -> (b,c) */
+  def +-> [T <: Any] (z:Map[T,WfAct]) = {
+    glinks = glinks.toList ::: z.map (p => new WLV(this,p._2,p._1)).toList
+    this
+  } 
+}
+
+/** selector activity - the basis for many other */
+case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple { 
+
+   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+    val sel = expr (in, v)
+    (v, glinks.filter(l => l.isInstanceOf[WLV] && l.asInstanceOf[WLV].selector == sel))
+  }
+}
+
+  //-------------------------funky
+  
+  case class WfLabel (name:String, aa:WfAct) extends WfProxy (aa) {
+     
+  }
+  
+  case class WfWhen (name:String, aa:WfAct) extends WfProxy (aa) {
+    // TODO needs to find the labeled one
+    // TODO needs to wait 
+  }
+  
   //------------------------------- seq / par
   
   /** a sequence contains a list of proxies */
@@ -89,12 +140,21 @@ import razie.base.{ActionContext => AC}
   }
 
   /** TODO fork-join. The end will wait for all processing threads to be done */
-  case class WfPar (a:WfAct*) extends WfAct {
-    gnodes = a
-    glinks = a.map (x => WL(this,x))
-   
-    /** does nothing just returns the spawns */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) =  (v, glinks)
+  case class WfPar (a:WfAct*) extends WfSimple {
+    gnodes = a map wf.bound
+    glinks = gnodes map (x => WL(this,x))
+    this --| aj
+    
+    lazy val aj = new AndJoin()
+    
+    // to avoid seq(seq(t)) we redefine to just link to what i already have
+    override def | (e:WfAct) = {
+      val p = wf.bound(e)
+      glinks = List(WL(this,p)) ::: glinks.toList
+      gnodes = gnodes.toList ::: List(p) 
+      p --| aj
+      this
+    }
   }
 
   /** scala code with no input nor return values */
@@ -204,42 +264,26 @@ protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
 
 //-------------------------------matchers 2
 
-class WfCase2[T <: Any] (val t : T) (a:WfAct) extends WfProxy(a) { 
+class WfCase2[T <: Any] (val t : T) (a:WfAct) extends WfSimple { 
+   gnodes = a :: Nil
    glinks = WL(this,a) :: Nil
    
-   def apply(value: Any) : Option[WfAct] =
-     if (value == null || !value.isInstanceOf[T] || value != t)
-       None
-     else 
-       Some(a)
-       
+   def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && value == t
   
    def + (b:WfCase2[_ <: Any]) : WfCases2 = new WfCases2 (List(this) ::: List(b))
    def + (b:List[WfCase2[_ <: Any]]) : WfCases2 = new WfCases2(List(this) ::: b)
 }
 
 class WfCase2a[T <: Any] (a:WfAct) extends WfCase2 (null) (a) { 
-   override def apply(value: Any) : Option[WfAct] =
-     if (value == null || !value.isInstanceOf[T])
-       None
-     else 
-       Some(a)
+   override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T]
 }
 
 class WfCase2p[T <: Any] (cond : T => Boolean) (a : WfAct) extends WfCase2 (null) (a) { 
-   override def apply(value: Any) : Option[WfAct] =
-     if (value == null || !value.isInstanceOf[T] || !cond(value.asInstanceOf[T]))
-       None
-     else 
-       Some(a)
+   override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && cond(value.asInstanceOf[T])
 }
 
 class WfCase2ap[T <: Any] (cond : T => Boolean) (a : WfAct) extends WfCase2a (a) { 
-   override def apply(value: Any) : Option[WfAct] =
-     if (value == null || !value.isInstanceOf[T] || !cond(value.asInstanceOf[T]))
-       None
-     else 
-       Some(a)
+   override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && cond(value.asInstanceOf[T])
 }
 
 class WfCases2 (val l : List[WfCase2[_ <: Any]]) extends WfSimple {
@@ -248,7 +292,7 @@ class WfCases2 (val l : List[WfCase2[_ <: Any]]) extends WfSimple {
 
 /** match anything */
 class WfCaseAny2 (a:WfAct) extends WfCase2(null)(a) { 
-   override def apply(value: Any) : Option[WfAct] = Some(a)
+   override def apply(value: Any) : Boolean = true
 }
 
 abstract class WfMatchBase extends WfAct {
@@ -267,41 +311,33 @@ case class WfMatch2 (
    
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
     val e = expr()
-    var ret:Seq[WL] = Nil
     
-//    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
-    for (i <- Range (0, glinks.size-1)) 
-      if (ret.isEmpty) {
-        val r = glinks(i).z.asInstanceOf[WfCase2[_]].apply(e).map (WL(this,_))
-        if (! r.isEmpty)
-          ret = r.toList
-      }
-    (v, ret)
+    (v,
+    glinks.filter (g => g.z.asInstanceOf[WfCase2[_]].apply(e))
+    )
   }
 }
 
 
 //---------------- if
 
-case class WfElse (t:WfAct)  extends WfScope (t) {
-//  glinks = WL(this,t) :: Nil
-}
+case class WfElse (t:WfAct)  extends WfScope (t) 
   
-case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends WfAct {
+case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:Option[WfElse] = None) extends WfAct {
   gnodes = List(t) ::: e.toList
   glinks = List (WL(this,t)) ::: e.map(WL(this,_)).toList
    
   /** return either branch, depending on cond */
-  def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
     if (cond(v)) 
       (v, glinks.first :: Nil)
     else
-      (v, e.firstOption.map(WL(this,_)).toList)
+      (v, e.map(WL(this,_)).toList)
         
    def welse (a:WfAct) : WfIf = {
      if (e.isEmpty) {
-       this.e = WfElse (a)
-       this +-> e
+       this.e = Some(WfElse (a))
+       this +-> e.get
      } else // oops, is this an welse wif welse?
        this.e.first.t match {
         case i : WfIf => i.welse(a)
@@ -309,4 +345,25 @@ case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:WfElse*) extends Wf
      }
      this
    }
+}
+
+case class WfIf2   (val cond : Any => Boolean, t:WfAct, var e:Option[WfElse]) 
+extends WfSelOne ((in,v)=>cond(v)) {
+
+  this +-> Map(true -> t)
+  e map (x => this +-> Map(false -> x))
+
+  // syntax helper
+   def welse (a:WfAct) : WfIf2 = {
+     if (e.isEmpty) {
+       this.e = Some(WfElse (a)) // to make sure that for next welse is not empty
+       this +-> Map(false -> this.e.get)
+     } else // oops, is this an welse wif welse?
+       this.e.first.t match {
+        case i : WfIf => i.welse(a)
+        case _ => razie.Error ("a second welse clause") // TODO cause syntax error
+     }
+     this
+   }
+  
 }

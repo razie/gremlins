@@ -3,10 +3,11 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.wf.lib
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.wf._
 
 /** bpel activities implemented as wf templates 
  * 
@@ -19,9 +20,9 @@ object bpel extends WfLib[WfAct] {
   //-------------------------------- basic activities
 
   def invoke = todo
-  def waitt = todo
+  def wwait = todo
   def receive = todo
-  def throww = todo
+  def wthrow = todo
   def reply = todo
   def empty = nop
   def assign = todo
@@ -36,7 +37,7 @@ object bpel extends WfLib[WfAct] {
   def whilee = todo
   def repeatUntil = todo
   def forEach = todo // parallel or seq...
-  def iff = todo // if cond act elseif cond act else act
+  def wif = todo // if cond act elseif cond act else act
   
   //-------------------------------- other
 

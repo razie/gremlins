@@ -10,12 +10,15 @@ import org.scalatest.SuperSuite
 class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
   
   // this is where you list the tests...
-  addTest(new junit.framework.TestSuite(classOf[com.razie.pub.actionables.test.TestActionables]))
-  addTest(new junit.framework.TestSuite(classOf[com.razie.pub.actionables.test.ExecFactoryTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfLibTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfBaseTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslSimpleTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslStructureTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.MoreSamplesTest]))
    
    def test1() = 
      // don't touch this line
-     addTest(new junit.framework.TestSuite(classOf[com.razie.pub.actionables.test.TestActionables]))
+     addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfLibTest]))
      
 }
 

@@ -3,10 +3,11 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.wf.lib
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.wf._
 
 /** bpel activities implemented as wf templates 
  * 

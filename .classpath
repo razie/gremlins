@@ -9,5 +9,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/razweb"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/scalatest"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/razxml"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/scripster"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

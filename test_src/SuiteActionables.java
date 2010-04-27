@@ -2,11 +2,11 @@
  * Razvan's code. Copyright 2008 based on Apache (share alike) see LICENSE.txt for details.
  */
 
+import razie.actionables.test.TestActionables;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
-import com.razie.pub.actionables.test.ExecFactoryTest;
-import com.razie.pub.actionables.test.TestActionables;
+import razie.actionables.test.ExecFactoryTest;
 
 /**
  * suite 

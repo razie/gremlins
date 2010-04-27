@@ -72,7 +72,7 @@ class SubG (a:GN5,z:Seq[GN5]) extends GN5 ("SubG") {
   nodes = a :: Nil
   
   def findEnds (z:GN5) = {
-     GStuff.filterNodes[GN5, GL5](z) {a => a.links.isEmpty}   
+     Graphs.filterNodes[GN5, GL5](z) {a => a.links.isEmpty}   
   }
 }
 

@@ -40,9 +40,24 @@ Templates
 
 In good circus tradition, a gremlin pyramid is a different beast.
 
-Besides a basic simple workflow implementation, some others can be grown as templates, in 
-<code>razie.wf.lib</code>. Choose whichever flavor you like.
+If we find a good base, all and any activity can be grown as templates, and packaged in libraries. 
+We'll build the most common in <code>razie.wf.lib</code>. Choose whichever flavor you like.
 
 A template is basically a structure of other, lower-level nodes.
+
+
+Extensibility
+-------------
+
+Not actions can be built from others. Especially those that interact with the environment (asynchronous
+comunication). We want to build extensibility right into the engine and we did that via "wf services".
+
+A wf service is just that: a service/plugin that offers some services to workflows, examples being
+scheduling, messaging etc.
+
+Do not confuse it with an external business services called by the workflow (like a Web Service from BPEL).
+ 
+These services are special in the sense that they are the only that can suspend an activity waiting 
+for a response.
 
 

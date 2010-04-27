@@ -10,18 +10,26 @@ import razie.base.{ActionContext => AC}
 
 //-------------------- graph processing engine
 
+object Audit {
+  private def audit (aa:AA) = razie.Audit (aa)
+
+  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) {// new session
+     audit (razie.AA("activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
+  }
+}
+
 /** 
  * a process thread encapsulates the state of a running workflow branch . You can see this as an 
  * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
  * conceptually these are independent paths of execution, for the PAR/JOIN branches for isntance
  */
-class ProcessThread (val start:WA, val startLink:Option[WL], val ctx:AC, val startValue:Any) { 
+class ProcessThread (val start:WfAct, val startLink:Option[WL], val ctx:AC, val startValue:Any) { 
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
      
   var currV:Any = startValue
      
   // the activity in progress
-  var currAct : WA = null
+  var currAct : WfAct = null
     
   // the activities to start on the next step
   var nextAct   = start 
@@ -44,7 +52,8 @@ class ProcessThread (val start:WA, val startLink:Option[WL], val ctx:AC, val sta
     pre
 
     // execute action and return continuations: either myself or a bunch of spawns
-    val (out, next) = currAct.traverse(ctx, currV)
+    val (out, next) = currAct.traverse(nextLink, ctx, currV)
+    Audit.recExec  (currAct, currV, out, next.size)
     currV = out
 
     next map (_.linkState = LinkState.SELECTED)
@@ -77,7 +86,7 @@ class ProcessThread (val start:WA, val startLink:Option[WL], val ctx:AC, val sta
  * 
  * I don't think the history should be kept, unless we're running in some sort of "debug" or "audit" mode.
  */
-class Process (val start:WA, val ctx:AC, val startV:Any) { 
+class Process (val start:WfAct, val ctx:AC, val startV:Any) { 
   var lastV = startV
     
   // the threads in progress these are all in parallel
@@ -99,12 +108,21 @@ class Process (val start:WA, val ctx:AC, val startV:Any) {
 
 /** the engine is more complicated in this case, basically graph traversal */
 class Engine { 
-  def exec (start:WA, ctx:AC, startV:Any) : Any = {
+  def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
     val p = new Process (start, ctx, startV)       
-      
+
+    preProcess (p)
+    
     while (!p.done) p.tick
       
     p.lastV 
+  }
+  
+  def preProcess (p:Process) {
+    razie.g.Graphs.foreach (p.start, 
+      (l:WfAct,v:Int)=>{},
+      (l:WL,v:Int) => l.z match { case a:AndJoin => a addIncoming l ; case _ => }
+      )
   }
      
   def checkpoint () {}
@@ -130,11 +148,28 @@ object wfeng {
   def andjoin (a:WfAct*) : WfAct = wf.todo
 }
 
+// and-join state: track incoming links and their values
+trait AJState extends WfaState {
+  var prev : scala.collection.mutable.HashMap[WL, Any] = null
+  
+  def addLink (l:WL, v:Any) = {
+    if (prev == null)
+       prev = razie.Mapi[WL, Any] ()
+    prev.put (l, v)
+  }
+}
+
 /** join parallel branches */
-case class AndJoin extends WfAct { 
-  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
-    case a : WfExec => (a.exec(in, v), glinks)
-    case _ => (v,glinks)
+case class AndJoin extends WfAct with AJState { 
+  var incoming : List[WL] = Nil // upon starting, the engine will traverse and populate this
+  def addIncoming (l:WL) = incoming = List(l) ::: incoming 
+  
+  /** waiting for all incoming branches and concatenating their values */
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
+     throw new IllegalStateException ("method should never be called")
+  override def traverse (from:Option[WL], in:AC, v:Any) : (Any,Seq[WL]) = {
+    addLink (from.get, v) // TODO null should bomb indicating andjoin with no branches in...
+    if (prev.size == incoming.size) (prev.values map (x => x) toList, glinks) // I'm done
+    else (v, Nil) // current thread dies
   }
 }
