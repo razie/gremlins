@@ -12,6 +12,8 @@ import razie.actionables._
 trait WfLib[T] extends WfLibrary[T] { 
   me =>
 
+  type Expr = (AC, Any) => Any
+
   // nop if you need an empty activity - maybe required by the syntax
   def nop  = me wrap new WfExec { override def execu() = {}; override def wname = "nop" }
   def todo = me wrap new WfExec { override def execu() = {}; override def wname = "TODO" }
@@ -36,7 +38,7 @@ trait WfLib[T] extends WfLibrary[T] {
   
   // logging
   def log (m: => Any) = me wrap new WfeLog ((x,y)=>m)
-  def log (m: (AC, Any)=> Any) = me wrap new WfeLog (m)
+  def log (m: Expr) = me wrap new WfeLog (m)
   
   // assign
   def assign (name:String) (value: =>Any) = me wrap new WfeAssign (name)((x)=>value)

@@ -42,13 +42,13 @@ class DslStructureTest extends JUnit3Suite {
     
   def wpar1 = wf.par(log(1), wf.log(2))
 
-  def testwpar1  = expect (1::2::Nil) { razie.M.any (wpar1 run 1) anyOrder }
+  def testwpar1  = expect (1::2::Nil) { razie.M.anyOrder (wpar1 run 1) }
 
   def wpar2 = nop | (nop + inc + log($0)) | (inc + log($0))
   def wpar3 = inc + log($0) | inc + log($0)
 
-  def testwpar2 = expect (1::2::2::Nil) { razie.M.any (wpar2.print run 1) anyOrder }
-//  def testwpar3 = expect (2::2::Nil) { (wpar3 run 1) }
+  def testwpar2 = expect (1::2::2::Nil) { razie.M.anyOrder (wpar2.print run 1) }
+  def testwpar3 = expect (2::2::Nil) { (wpar3 run 1) }
 
   //-------------------------- match/case
   
@@ -61,9 +61,9 @@ class DslStructureTest extends JUnit3Suite {
     wcaseany2   {log ("matched none")}
   }
     
-//  def testw1 = expect ("m 1") { println (wm1.mkString); wm1 run 1 }
-//  def testw2 = expect ("m 2") { wm1 run 2 }
-//  def testw3 = expect ("m Gigi") { wm1 run "Gigi" }
-//  def testw4 = expect ("m 1,2,3") { println (wm1.mkString); wm1 run List(1,2,3) }
+  def testw1 = expect ("m 1") { println (wm1.mkString); wm1 run 1 }
+  def testw2 = expect ("m 2") { wm1 run 2 }
+  def testw3 = expect ("m Gigi") { wm1 run "Gigi" }
+  def testw4 = expect ("m 1,2,3") { println (wm1.mkString); wm1 run List(1,2,3) }
 
 }

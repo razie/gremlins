@@ -48,7 +48,8 @@ object wf extends WfLib[WfAct] {
   
   //----------------- match
   
-  def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 (()=>expr, f.l)
+  def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 ((x,y)=>expr, f.l)
+  def wmatch2 (expr : Expr) (f: WfCases2) = WfMatch2 (expr, f.l)
 //  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
   // this should work because it is only called when the value actually matches...
   def wcaseany2 (f: => WfAct) = new WfCaseAny2(f)
