@@ -24,7 +24,7 @@ object bpel extends WfLib[WfAct] {
   def receive = todo
   def wthrow = todo
   def reply = todo
-  def empty = nop
+  def empty = todo
   def assign = todo
   def terminate = todo
 

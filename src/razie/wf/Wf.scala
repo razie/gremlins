@@ -22,40 +22,50 @@ import razie.base.{ActionContext => AC}
  * 
  * @author razvanc
  */
-object wf extends WfLib[WfAct] {
+object wf extends WfBaseLib[WfAct] {
    
   override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
+  
+  def toDsl (x:AnyRef) =
+    if (x.isInstanceOf[isser]) x.asInstanceOf[isser].toDsl 
+    else throw new IllegalArgumentException ("x not isser cls="+x.getClass.getName)
    
   //----------------- base activitities
    
   // return the parsed owrkflow or throw exception with error
   def apply (s:String) : WfAct = {
-     val res = new WCFBaseLib().parseitman(s)
+     val res = WCF.parseitman(s) // TODO use factory and hookup with WCF registration of libraries
     
      if (res.successful) res.get
      else throw new IllegalArgumentException (res.toString)
   }
   
   //----------------- if
-  
-  type Cond0 = Unit => Boolean
+ 
+  type FB = WFunc[Boolean]
   type Cond1 = Any => Boolean
-
-  implicit def wc0 (cond : => Boolean) : Cond1 = (x) => cond
-  implicit def wc1 (script : String) : Cond1 = (x) => true // TODO evaluate the s
   
-  def wif  (cond : Cond1) (f: => WfAct)     = WfIf (cond, f)
+  implicit def wc0 (cond : => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond }
+  def wc1 (cond : Cond1) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond(v) }
+  implicit def wc3 (script : String) : WFunc[Boolean] = WCFExpr parseBExpr script
+//  implicit def wc2 (e : BExpr) : WFunc[Boolean] = (x) => true // TODO evaluate the s
+  
+//  def wif  (cond : => Boolean) (f: => WfAct)     = WfIf (cond, f)
+  def wif  (cond : Cond1) (f: => WfAct)     = WfIf (wc1(cond), f)
+  def wif  (cond : FB) (f: => WfAct)     = WfIf (cond, f)
+//  def wif  (cond : BExpr) (f: => WfAct)     = WfIf (cond, f)
   
   //----------------- match
   
-  def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 ((x,y)=>expr, f.l)
-  def wmatch2 (expr : Expr) (f: WfCases2) = WfMatch2 (expr, f.l)
+//  def wmatch2 (expr : =>Any) (f: WfCases2) = WfMatch2 ((x,y)=>expr, f.l)
+  def wmatch2 (expr : XExpr) (f: WfCases2) = WfMatch2 (expr, f.l)
 //  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
   // this should work because it is only called when the value actually matches...
   def wcaseany2 (f: => WfAct) = new WfCaseAny2(f)
   def wcase2[T] (t:T) (f: => WfAct) = new WfCase2[T](t)(f)
   
-  def wmatch (expr : =>Any) (f: WfCases2) = wmatch2 (expr)(f)
+//  def wmatch (expr : =>Any) (f: WfCases2) = wmatch2 (expr)(f)
+  def wmatch (expr : XExpr) (f: WfCases2) = wmatch2 (expr)(f)
   def wcaseany (f: WfAct) = wcaseany2(f)
   def wcase[T] (t:T) (f: => WfAct) = new WfCase2[T](t)(f)
 
@@ -104,15 +114,17 @@ object wfs {
 
   //----------------- if
   
-  type Cond0 = Unit => Boolean
+  type FB = WFunc[Boolean]
   type Cond1 = Any => Boolean
 
-  implicit def wc0 (cond : => Boolean) : Cond1 = (x) => cond
+  implicit def wc0 (cond : Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond }
+  def wc1 (cond : Any => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond(v) }
   
-  def wuif (cond : Cond1) (f: => Unit)    = WfIf (cond, WfScala(()=>f))
-  def wsif  (cond : Cond1) (f: => Any)     = WfIf (cond, WfScalaV0(()=>f))
-  def waif (cond : Cond1) (f: Any => Any) = WfIf (cond, WfScalaV1((x)=>f(x)))
-  def wauif (cond : Cond1) (f: Any => Unit)= WfIf (cond, WfScalaV1((x)=>f(x)))
+  def wuif (cond : FB) (f: => Unit)    = WfIf (cond, WfScala(()=>f))
+  def wsif  (cond : FB) (f: => Any)     = WfIf (cond, WfScalaV0(()=>f))
+  def waif (cond : Cond1) (f: Any => Any) = WfIf (wc1(cond), WfScalaV1((x)=>f(x)))
+  def waif (cond : FB) (f: Any => Any) = WfIf (cond, WfScalaV1((x)=>f(x)))
+  def wauif (cond : FB) (f: Any => Unit)= WfIf (cond, WfScalaV1((x)=>f(x)))
   
   //----------------- match
   

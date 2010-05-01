@@ -35,21 +35,19 @@ class ProcessThread (val start:WfAct, val startLink:Option[WL], val ctx:AC, val 
   var nextAct   = start 
   var nextLink  = startLink
    
-  // pre-processing
-  protected def pre = {
+  protected def preProcessing = {
     currAct = nextAct
     currAct.procState = ProcState.INPROGRESS 
     nextLink map (_.linkState = LinkState.DONE)
   }
     
-  // post-processing
-  protected def post = {
+  protected def postProcessing = {
     currAct.procState = ProcState.DONE 
   }
     
   // advance to next action and return if there's more threads to spawn
   def move : (Any,Seq[ProcessThread]) = {
-    pre
+    preProcessing
 
     // execute action and return continuations: either myself or a bunch of spawns
     val (out, next) = currAct.traverse(nextLink, ctx, currV)
@@ -71,7 +69,7 @@ class ProcessThread (val start:WfAct, val startLink:Option[WL], val ctx:AC, val 
         Nil // done - no continuations
     }
     
-    post
+    postProcessing
     (currV,res)
   }
     
@@ -104,6 +102,9 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
   }
     
   def done () : Boolean = currThreads.isEmpty
+  
+  def persist = "" // TODO
+  def recover (s:Any) {} // TODO
 }
 
 /** the engine is more complicated in this case, basically graph traversal */
@@ -119,6 +120,7 @@ class Engine {
   }
   
   def preProcess (p:Process) {
+    // cache z ends to AndJoins
     razie.g.Graphs.foreach (p.start, 
       (l:WfAct,v:Int)=>{},
       (l:WL,v:Int) => l.z match { case a:AndJoin => a addIncoming l ; case _ => }
@@ -133,9 +135,6 @@ object Engines {
 }
 
 
-trait Gremlin {
-   
-}
 
 /** the special activities that control the engine itself - hopefully as few as possible */
 object wfeng {

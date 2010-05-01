@@ -10,10 +10,10 @@ import razie.wf._
 class WfBaseTest extends JUnit3Suite {
   import wf._
 
-  def wseq = wf.seq(wf.nop, wf.log(1))
+  def wseq = seq(nop, log(1))
   def testwseq = expect (1) { wseq run 1 }
 
-  def wpar = wf.par(wf.nop, wf.log(1))
-  def testwpar = expect (1) { wpar run 1 }
+  def wpar = par(nop, log(1))
+  def testwpar = expect (1::1::Nil) { wpar run 1 }
 
 }

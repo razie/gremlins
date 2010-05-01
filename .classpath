@@ -11,5 +11,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/razxml"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/scripster"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/scalacompiler"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

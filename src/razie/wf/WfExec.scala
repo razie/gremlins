@@ -10,10 +10,8 @@ import razie.actionables._
 
 /** this is the actual work carried out by the respective action */
 trait WfExec extends WFunc[Any] {
-  override  def exec  (in:AC, prevValue:Any) : Any = exec (prevValue)
-  protected def exec  (prevValue:Any)                   : Any = { execu(); prevValue} /* default does nothing */
-  protected def execu ()                                : Unit = {} /* default does nothing */
-            def wname : String = "?"
+//  override  def exec  (in:AC, prevValue:Any) : Any = exec (prevValue)
+  def wname : String = "?"
 }
 
 trait WfLibrary[T] { 

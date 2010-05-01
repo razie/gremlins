@@ -187,9 +187,9 @@ While different functionalities like Web Services Choreography can be grafted on
 like adding libraries to Java, I feel that a new framework of concepts and constructs is needed, to 
 become the fabric for all the new constructs. 
 
-While the BPM guys claim "we've got it" they're right. But so are the BPEL boys and the XPDL gals while 
-the YAWL deserves a big "Hurah"....YET we're left to pick up the pieces in all and any language. 
-There is no low-level workflow that we can use and 
+While the BPM guys claim "we've got it" they're right. But so did BPEL, XPDL, YAWL etc....YET 
+we're left to pick up the pieces in all and any language. 
+There is no light workflow that we can use and 
 all we can do is use all kinds of graphic designers, design all kinds of XML representation and interact 
 with 3rd party engines which require yet more integration to interact with 3rd party systems, while at 
 every step, simplicity is sacrificed on the altar of...well, I don't know!

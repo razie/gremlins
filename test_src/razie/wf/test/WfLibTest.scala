@@ -10,10 +10,21 @@ import razie.wf._
 class WfLibTest extends JUnit3Suite {
   import wf._
 
+  def wnop = wf.nop
+  def wlog = wf.log($0)
+  
   def w1 = wf.nop + wf.log($0)
   def w1s = """nop; log($0)"""
   def w1p = """nop; log(1)""" // TODO enhance with parsing numbers
   def testw1 = expect (1) { w1 run 1 }
   def testw1s = expect (1) { wf(w1s) run 1 }
   def testw1p = expect ("1") { wf(w1p) run 1 }
+  
+  def testw11 = expect ("12") { act("simple", "add", "a=1,b=2") run 1 }
+  def testw12 = expect ("12") { wf ("act:simple:add(a=1,b=2)") run 1 }
+  
+  // test serialization
+  def testserwnop = expect (true) { wf(wf toDsl wnop).isInstanceOf[WfAct] }
+  def testserwlog = expect (1) { wf(wf toDsl wlog) run 1 }
+  def testw12s = expect ("12") { wf(wf toDsl wf("act:simple:add(a=1,b=2)")) run 1 }
 }

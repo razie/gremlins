@@ -7,6 +7,20 @@ package razie.wf
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.g._
+
+//-------------------- serialization: not the best idea...but
+
+/** deser is assumed via DSL */
+trait isser /*extends GReferenceable*/ {
+  def serialize : String = toDsl
+  
+  /* serialize the DEFINITION 
+   * 
+   * this must be the same format as the DSL one-liner or multiple lnes (for structured)
+   */
+  def toDsl : String 
+}
 
 //-------------------- engine/graph
 

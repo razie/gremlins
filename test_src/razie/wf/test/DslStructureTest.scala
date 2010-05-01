@@ -57,7 +57,6 @@ class DslStructureTest extends JUnit3Suite {
     wcase2[Int] (2) {log ("m 2")} +
     wcase2      ("Gigi") {log ("m Gigi")} +
     wcase2      (List(1,2,3)) {log ("m 1,2,3")} +
-    wcase2      {l:Seq[Int] => l(2) == 2} {log ("matched list with secnod elem 2")} +
     wcaseany2   {log ("matched none")}
   }
     

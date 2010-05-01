@@ -21,10 +21,14 @@ import razie.wf._
   }
 
   /** simple activities just do their thing */
-  case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec { 
+  case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with isser { 
     override def exec (in:AC, prevValue:Any) = wrapped.exec(in, prevValue)
     override def toString : String = "wf." + wrapped.wname
     override def wname = wrapped.wname
+    
+    override def toDsl = 
+      if (wrapped.isInstanceOf[isser]) wrapped.asInstanceOf[isser].toDsl 
+      else throw new IllegalArgumentException ("wrapped not isser cls="+wrapped.getClass.getName)
   }
 
   //------------------- begin / end subgraph
@@ -299,7 +303,7 @@ abstract class WfMatchBase extends WfAct {
   gnodes = Nil
   glinks = branches.map (WL(this,_))
   
-  val expr : wf.Expr
+  val expr : XExpr
   val branches : Seq[WfCase2[_]]
   
   lazy val any = glinks.filter(_.z.isInstanceOf[WfCaseAny2])
@@ -307,11 +311,11 @@ abstract class WfMatchBase extends WfAct {
 }
 
 case class WfMatch2 (
-      val expr : wf.Expr,
+      val expr : XExpr,
       val branches : Seq[WfCase2[_]]
       ) extends WfMatchBase {
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
-    val e = expr(in, v)
+    val e = expr.eval (in, v)
     val res = others.filter (g => g.z.asInstanceOf[WfCase2[_]].apply(e))
     
     (v,
@@ -325,13 +329,13 @@ case class WfMatch2 (
 
 case class WfElse (t:WfAct)  extends WfScope (t) 
   
-case class WfIf   (val cond : Any => Boolean, t:WfAct, var e:Option[WfElse] = None) extends WfAct {
+case class WfIf   (val cond : WFunc[Boolean], t:WfAct, var e:Option[WfElse] = None) extends WfAct {
   gnodes = List(t) ::: e.toList
   glinks = List (WL(this,t)) ::: e.map(WL(this,_)).toList
    
   /** return either branch, depending on cond */
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
-    if (cond(v)) 
+    if (cond.exec(in, v)) 
       (v, glinks.first :: Nil)
     else
       (v, e.map(WL(this,_)).toList)
