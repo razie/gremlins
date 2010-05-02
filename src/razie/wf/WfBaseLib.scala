@@ -40,15 +40,16 @@ trait WfBaseLib[T] extends WfLib[T] {
   
   implicit def xe  (sc:String) = new XExpr (sc)
   implicit def xei (sc:Int) = new XExpr (sc.toString)
-
   
   // nop if you need an empty activity - maybe required by the syntax
   def nop  = me wrap new Wfe0 ("nop")
   
+  def inc (i:XExpr) = me wrap new WfeInc (i)
   def inc (i:String) = me wrap new WfeInc (WCFExpr parseXExpr i)
   def inc (i:Int=1) = me wrap new WfeInc (WCFExpr parseXExpr i.toString)
   def inc : T = inc(1)
-  def dec (i:Int=1) = inc (-1 * i)
+  def dec (i:XExpr) = me wrap new WfeDec (i)
+  def dec (i:Int=1) = me wrap new WfeDec (WCFExpr parseXExpr i.toString)
   def dec : T = dec(1)
   def set (i:Any) = me wrap new WfeSet (WCFExpr parseXExpr i.toString)
   
@@ -81,11 +82,11 @@ trait WCFBaseLib extends WCFExpr {
   def wlog: Parser[WfAct] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
   def wnop: Parser[WfAct] = "nop" ^^ (x => wf.nop)
   def winc: Parser[WfAct] = "inc"~opt("("~expr~")") ^^ {
-     case "inc"~Some(e) => wf.inc()
+     case "inc"~Some("("~e~")") => wf.inc(e)
      case "inc"~None => wf.inc()
   }
   def wdec: Parser[WfAct] = "dec"~opt("("~expr~")") ^^ {
-     case "dec"~Some(e) => wf.inc()
+     case "dec"~Some("("~e~")") => wf.dec(e)
      case "dec"~None => wf.inc(-1)
   }
   
@@ -128,6 +129,11 @@ class WfeLog (e:XExpr) extends Wfe1 ("log", e) {
 class WfeInc (e:XExpr) extends Wfe1 ("inc", e) { 
   override def exec  (in:AC, prevValue:Any) : Any = 
     prevValue.asInstanceOf[Int] + e.eval(in, prevValue).toString.toInt
+}
+  
+class WfeDec (e:XExpr) extends Wfe1 ("dec", e) { 
+  override def exec  (in:AC, prevValue:Any) : Any = 
+    prevValue.asInstanceOf[Int] - e.eval(in, prevValue).toString.toInt
 }
   
 class WfeSet (newV:XExpr) extends Wfe1 ("set", newV) { 

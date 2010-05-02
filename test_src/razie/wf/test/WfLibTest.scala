@@ -27,4 +27,11 @@ class WfLibTest extends JUnit3Suite {
   def testserwnop = expect (true) { wf(wf toDsl wnop).isInstanceOf[WfAct] }
   def testserwlog = expect (1) { wf(wf toDsl wlog) run 1 }
   def testw12s = expect ("12") { wf(wf toDsl wf("act:simple:add(a=1,b=2)")) run 1 }
+  
+  def wi1 = wf.inc(3) + wf.dec(2)
+  def wi1s = """inc(3); dec (2)"""
+  def testwi1 = expect (2) { wi1 run 1 }
+  def testwi1s = expect (2) { wf(wi1s) run 1 }
+  def testwi1ss = expect (2) { wf(wf toDsl wi1) run 1 }
+  
 }

@@ -121,7 +121,7 @@ case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple {
   //------------------------------- seq / par
   
   /** a sequence contains a list of proxies */
-  case class WfSeq (a:WfAct*) extends WfAct {
+  case class WfSeq (a:WfAct*) extends WfAct with isser {
     // wrap each in a proxy and link them in sequence
     gnodes = 
       a.foldRight (Nil:List[WfAct])((x,l) => wf.bound(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
@@ -141,6 +141,8 @@ case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple {
      gnodes = gnodes.toList ::: List(p) 
      this
      }
+    
+    override def toDsl = "seq {\n" + gnodes.map(wf toDsl _).mkString("\n") + "\n}"
   }
 
   /** TODO fork-join. The end will wait for all processing threads to be done */
