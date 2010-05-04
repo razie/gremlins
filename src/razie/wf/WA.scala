@@ -9,19 +9,6 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.g._
 
-//-------------------- serialization: not the best idea...but
-
-/** deser is assumed via DSL */
-trait isser /*extends GReferenceable*/ {
-  def serialize : String = toDsl
-  
-  /* serialize the DEFINITION 
-   * 
-   * this must be the same format as the DSL one-liner or multiple lnes (for structured)
-   */
-  def toDsl : String 
-}
-
 //-------------------- engine/graph
 
 /** encapsulates the state of a workflow execution/traversal path */
@@ -70,8 +57,7 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   // -------------- specific to WF? could move down?
   
   /** point all leafs to z - an end node */
-  def --| ( z:WfAct)(implicit linkFactory: LFactory)  = {
-    // find all leafs and connect them to me
+  def --| (z:WfAct)(implicit linkFactory: LFactory)  = {
     ( razie.g.Graphs.filterNodes[WfAct,WL](this) {z => z.glinks.isEmpty} ) foreach (i => i +-> z)
     this
   }

@@ -11,15 +11,20 @@ import razie.base.{ActionContext => AC}
 import razie.base.scripting._
 import razie.wf.lib._
 
-abstract class Expr[T] (val expr : String) extends WFunc[T] {
+abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {
   override def exec (in:AC, prevValue:Any) : T = eval (in, prevValue)
   // basically rename exec to eval
   def eval (in:AC, prevValue:Any) : T 
   override def toString = expr
+  override def toDsl = expr
 }
   
 class XExpr (e : String) extends Expr[Any] (e) {
   override def eval (in:AC, prevValue:Any) : Any = e
+}
+
+class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) with notisser {
+  override def eval (in:AC, prevValue:Any) : Any = ee
 }
 
 class $Expr (name : String) extends XExpr ("$"+name) {
@@ -121,6 +126,7 @@ trait WCFBase extends WCFExpr {
   
   def seq : Parser[WfAct] = "seq"~wset ^^ { case "seq"~l => wf.seq(l:_*) }
   def par : Parser[WfAct] = "par"~wset ^^ { case "par"~l => wf.par(l:_*) }
+  def scope : Parser[WfAct] = "scope"~one ^^ { case "scope"~a => wf.scope(a) }
   def label : Parser[WfAct] = "label"~ident~one ^^ { case "label"~i~a => wf.label(i, a) }
   
   def oneormore : Parser[WfAct] = one | wset ^^ { l => wf.seq(l:_*) }
@@ -130,32 +136,12 @@ trait WCFBase extends WCFExpr {
 
   def wfdefn : Parser[WfAct] = rep(wfa) ^^ { case l => wf.seq(l:_*) }
   
-  def wctrl : Parser[WfAct] = wif | seq | par
+  def wctrl : Parser[WfAct] = wif | seq | par | scope
  
   def wif : Parser[WfAct] = "if"~"("~cond~")"~"then"~wfa~opt(welse) ^^ {
      case "if"~"("~cond~")"~"then"~wfa~we => new WfIf (cond, wfa, we)
   }
   def welse : Parser[WfElse] = "else"~wfa ^^ { case "else"~wfa => new WfElse (wfa) }
-  
-  def bcmp (a:BExpr, s:String, b:BExpr) = new BExpr {
-     override def eval (in:AC, v:Any) = s match {
-        case "||" => a.eval(in, v) || b.eval(in, v)
-        case "&&" => a.eval(in, v) && b.eval(in, v)
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
-        } 
-     }
-  
-  def cmp (a:XExpr, s:String, b:XExpr) = new BExpr {
-     override def eval (in:AC, v:Any) = s match {
-        case "==" => a.eval(in, v) == b.eval(in, v)
-        case "!=" => a.eval(in, v) != b.eval(in, v)
-//        case "<=" => a.eval(in) <= b.eval(in)
-//        case ">=" => a.eval(in) >= b.eval(in)
-//        case "<" => a.eval(in) < b.eval(in)
-//        case ">" => a.eval(in) > b.eval(in)
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
-        } 
-     }
   
 //  def wmatch : Parser[Any] = "match"~"("~expr~")"~"{"~rep(wcase)~"}"
 //  def wcase : Parser[Any] = "case"~const~"=>"~wfa

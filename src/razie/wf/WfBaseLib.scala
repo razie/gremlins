@@ -9,18 +9,18 @@ import razie.base.{ActionContext => AC}
 import razie.actionables._
 
 /** no arguments or expressions of any kind */
-class Wfe0 (override val wname:String) extends WfExec with isser {
+class Wfe0 (override val wname:String) extends WfExec with HasDsl {
   override def exec(in:AC, v:Any) = v
   override def toDsl = wname
 }
 
 /** do(expr) - uses an expression - either constant or a scripted expression */
-abstract class Wfe1 (override val wname:String, val expr:XExpr) extends WfExec with isser {
-  override def toDsl = wname+" ("+expr.toString+")"
+abstract class Wfe1 (override val wname:String, val expr:XExpr) extends WfExec with HasDsl {
+  override def toDsl = wname+" ("+expr.toDsl+")"
 }
 
 /** do(a=b,c=d...) - has arguments */
-abstract class Wfe2 (override val wname:String, val aa:razie.AA) extends WfExec with isser {
+abstract class Wfe2 (override val wname:String, val aa:razie.AA) extends WfExec with HasDsl {
   override def toDsl = wname+" ("+aa.toString+")"
 }
 
@@ -39,7 +39,7 @@ trait WfBaseLib[T] extends WfLib[T] {
   def $ (name:String) = new $Expr (name)
   
   implicit def xe  (sc:String) = new XExpr (sc)
-  implicit def xei (sc:Int) = new XExpr (sc.toString)
+  implicit def xei (sc:Int) = new CExpr (sc)
   
   // nop if you need an empty activity - maybe required by the syntax
   def nop  = me wrap new Wfe0 ("nop")
@@ -128,7 +128,8 @@ class WfeLog (e:XExpr) extends Wfe1 ("log", e) {
 
 class WfeInc (e:XExpr) extends Wfe1 ("inc", e) { 
   override def exec  (in:AC, prevValue:Any) : Any = 
-    prevValue.asInstanceOf[Int] + e.eval(in, prevValue).toString.toInt
+    (if (prevValue.isInstanceOf[Int]) prevValue.asInstanceOf[Int] else prevValue.toString.toInt) + 
+    e.eval(in, prevValue).toString.toInt
 }
   
 class WfeDec (e:XExpr) extends Wfe1 ("dec", e) { 

@@ -15,3 +15,22 @@ trait WFunc[T] { // extends PartialFunc ?
 trait JWFunc extends WFunc[Any] {
   override def exec (in:ActionContext, prevValue:Any) : Any
 }
+
+//-------------------- serialization: not the best idea...but
+
+/** deser is assumed via DSL */
+trait HasDsl /*extends GReferenceable*/ {
+  def serialize : String = toDsl
+  
+  /* serialize the DEFINITION 
+   * 
+   * this must be the same format as the DSL one-liner or multiple lnes (for structured)
+   */
+  def toDsl : String 
+}
+
+/** TODO could be better */
+trait notisser /*extends GReferenceable*/ extends HasDsl {
+  override def toDsl : String  = throw new UnsupportedOperationException ("class notisser")
+}
+

@@ -1,5 +1,8 @@
 package razie.wf
 
+import razie.g.GLoc
+import razie.GPath
+
 trait WfId
 
 trait WfHandle {
@@ -7,21 +10,26 @@ trait WfHandle {
   val me : WfId
 }
 
+trait WPath // syntax marker
+case class RWPath (loc:GLoc, root:WfId, path:String) extends GPath (path) {} // the real McCoy
+
 /** trait shared by gremlins - lifecycle management, basically */
 trait GremlinWf {
   // workflow lifecycle
-  def c ()   
+  def c () // TODO what signature?
   def r () // read all, curr state
-  def u () // several types of udpate
-  def d ()   
+  def u (who:WfId) // several types of udpate
+  def d (who:WfId)
  
   // remote control
-  def play (who:WfId)   
-  def pause (who:WfId)   
-  def breakpoint (who:WfId)   
-  def stepOver (who:WfId)   
-  def stepInto (who:WfId)   
-  def stop (who:WfId)   
+  // TODO should these be asynchronous or both versions?
+  def play (who:WPath)   
+  def pause (who:WPath) : WPath
+  def breakpoint (who:WPath) 
+  def stepOver (who:WPath) : WPath
+  def stepInto (who:WPath) : WPath
+  def stop (who:WPath) : WPath
+  def rollback (who:WPath)   
   
   // travel api
   def supports (a:WfAct) : Boolean

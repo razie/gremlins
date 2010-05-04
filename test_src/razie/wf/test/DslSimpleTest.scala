@@ -15,6 +15,7 @@ class DslSimpleTest extends JUnit3Suite {
   val w11 = wf.nop --> wf.inc --> wf.log($0) // trouble...
   val w12 = wf.nop --| wf.inc --| wf.log($0) // ok...
   def w1s = """nop; inc; log($0)"""
+  def w2s = """seq { nop; inc; log($0) }"""
   def w1m = """
 nop
 inc
@@ -24,6 +25,7 @@ log($0)
   def testw11 = expect (1) { w11 run 1 }
   def testw12 = expect (2) { w12 run 1 }
   def testw1s = expect (2) { wf(w1s) run 1 }
+  def testw2s = expect (2) { wf(w2s) run 1 }
   def testw1m = expect (2) { wf(w1m) run 1 }
  
   // TODO work on the expressions with $0

@@ -6,6 +6,7 @@
 package razie.wf
 
 import razie.AA
+import razie.g.GLoc
 
 object LinkState extends Enumeration {
   val CREATED, SELECTED, DONE = Value
@@ -21,18 +22,24 @@ object ProcStatus extends Enumeration {
   val WHATEVER, OK, NOTOK, LATE = Value
 }
 
-/*
+case class AuditEvent (val code : String, info:Any*) extends AA (info) 
+
+/** collect any audit information here, such as result of intermediary expressions what not */
+trait IsAudited {
+  lazy val auditEvents = new scala.collection.mutable.ListBuffer[AuditEvent]()
+  
+  def audit (e:AuditEvent) = { this.auditEvents += e; this }
+}
+
+/**
  * this encapsulates an action's state. it needs to be persisted to recove the action.
  * 
  * since it's a trait, it may be mixed into an action or kept in a parallel structure...your choice
  */
-trait WfaState {
+trait WfaState extends IsAudited {
   var procState : ProcState.Value   = ProcState.CREATED
   var procStatus : ProcStatus.Value = ProcStatus.WHATEVER 
 
-  /** collect any audit information here, such as result of intermediary expressions what not */
-  lazy val audit : AA = AA()
-  
   def wfaPersistString : String = "WfaState["+procState+","+procStatus+"]"
   def wfaLoadFromPersistString (s:String) {
     val pat = """WfaState\[\([^,]*\),\([^,]*\)]""".r

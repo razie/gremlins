@@ -27,12 +27,12 @@ object wf extends WfBaseLib[WfAct] {
   override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
   
   def toDsl (x:AnyRef) =
-    if (x.isInstanceOf[isser]) x.asInstanceOf[isser].toDsl 
-    else throw new IllegalArgumentException ("x not isser cls="+x.getClass.getName)
+    if (x.isInstanceOf[HasDsl]) x.asInstanceOf[HasDsl].toDsl 
+    else throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
    
   //----------------- base activitities
    
-  // return the parsed owrkflow or throw exception with error
+  // return the parsed workflow or throw exception with error
   def apply (s:String) : WfAct = {
      val res = WCF.parseitman(s) // TODO use factory and hookup with WCF registration of libraries
     
@@ -69,6 +69,8 @@ object wf extends WfBaseLib[WfAct] {
   def wcaseany (f: WfAct) = wcaseany2(f)
   def wcase[T] (t:T) (f: => WfAct) = new WfCase2[T](t)(f)
 
+  // --------------- seq, par
+  
   def seq (a : WfAct*) : WfAct = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
      if (a.size == 1 && a.first.glinks.isEmpty) a.first
      else new WfSeq (a:_*)
@@ -78,14 +80,14 @@ object wf extends WfBaseLib[WfAct] {
   def label (n:String, a : WfAct) = new WfLabel (n, a)
     
   /** bound this subgraph in a scope, if needed */
-  def bound (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+  def scope (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
      if (a.glinks.isEmpty) a
      else new WfScope (a)
      
   implicit val linkFactory = (x,y) => WL(x,y)
   
   /** bound this subgraph in a scope, if needed */
-  def bound (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+  def scope (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope
      if (a.glinks.isEmpty) {
         l map (a +-> _.z)
         a
