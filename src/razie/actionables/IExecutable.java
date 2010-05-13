@@ -7,5 +7,4 @@ import razie.base.AttrAccess;
  * @author razvanc
  */
 public interface IExecutable extends razie.wf.JWFunc {
-//   public Object execute(AttrAccess in, Object v);
 }

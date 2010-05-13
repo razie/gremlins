@@ -10,4 +10,6 @@ class DslStructureTest extends JUnit3Suite {
   import wf._ // the workflow constructs library
 
   // ALL structure tests are in WfBaseTest - see that one
+  
+  def testNothing = expect (true) { true }
 }

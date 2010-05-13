@@ -15,7 +15,7 @@ class ExecLog extends IExecutable {
 	def spec : ActionableSpec = new ActionableSpec(
 			razie.AA("msg=missing"), razie.AA("result"));
 
-   override def exec(in:ActionContext, v:Any):Any = {
+   override def apply(in:ActionContext, v:Any):Any = {
       val msg = in sa "msg"
   
 		Log logThis msg

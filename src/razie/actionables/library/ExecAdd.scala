@@ -8,7 +8,7 @@ import razie.base._
 class ExecAdd () extends razie.actionables.IExecutable {
   import scala.collection.JavaConversions._
 
-  override def exec(in:ActionContext, v:Any):Any = {
+  override def apply(in:ActionContext, v:Any):Any = {
 	 var sum:String = ""
   
     for (val y <- in.getPopulatedAttr.toList.sort((a,b) => a.toString < b.toString)) 

@@ -12,29 +12,65 @@ import razie.base.scripting._
 import razie.wf.lib._
 
 abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {
-  override def exec (in:AC, prevValue:Any) : T = eval (in, prevValue)
-  // basically rename exec to eval
-  def eval (in:AC, prevValue:Any) : T 
   override def toString = expr
   override def toDsl = expr
 }
   
-class XExpr (e : String) extends Expr[Any] (e) {
-  override def eval (in:AC, prevValue:Any) : Any = e
+case class XExpr (e : String) extends Expr[Any] (e) {
+  override def apply (in:AC, v:Any) : Any = e
+  
+  def + [T <:Any] (t:T) = t match {
+     case b:XExpr => new XExprPLUS (this,b)
+     case x@_=> new XExprPLUS (this,new CExpr(x))
+  }
+  
+  def == (b:XExpr) = new BCMP2 (this,"==",b)
+  def != (b:XExpr) = new BCMP2 (this,"!=",b)
+  def <  (b:XExpr) = new BCMP2 (this,"<",b)
+  def >  (b:XExpr) = new BCMP2 (this,">",b)
+  def >= (b:XExpr) = new BCMP2 (this,">=",b)
+  def <= (b:XExpr) = new BCMP2 (this,"<=",b)
 }
 
-class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) with notisser {
-  override def eval (in:AC, prevValue:Any) : Any = ee
+class XExprPLUS (a:XExpr, b:XExpr) extends XExpr ("+") {
+  override def apply (in:AC, v:Any) : Any = a(in, v).toString + b(in,v).toString
 }
 
-class $Expr (name : String) extends XExpr ("$"+name) {
-  override def eval (in:AC, prevValue:Any) : Any = name match {
-     case "0" => prevValue
+case class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) with notisser {
+  override def apply (in:AC, v:Any) : Any = ee
+}
+
+case class $Expr (name : String) extends XExpr ("$"+name) {
+  override def apply (in:AC, v:Any) : Any = name match {
+     case "0" => v
      case _ => in a name
   }
 }
   
-abstract class BExpr (e:String) extends Expr[Boolean] (e)
+abstract class BExpr (e:String) extends Expr[Boolean] (e) {
+  def || (b:BExpr) = new BCMP1 (this,"||",b)
+  def && (b:BExpr) = new BCMP1 (this,"&&",b)
+}  
+
+case class BCMP1 (a:BExpr, s:String, b:BExpr) extends BExpr (a.toDsl+" "+s+" "+b.toDsl) {
+     override def apply (in:AC, v:Any) = s match {
+        case "||" => a.apply(in, v) || b.apply(in, v)
+        case "&&" => a.apply(in, v) && b.apply(in, v)
+        case _ => error ("Operator " + s + " UNKNOWN!!!")
+        } 
+     }
+  
+case class BCMP2  (a:XExpr, s:String, b:XExpr) extends BExpr (a.toDsl+" "+s+" "+b.toDsl) {
+     override def apply (in:AC, v:Any) = s match {
+        case "==" => a(in, v) == b(in, v)
+        case "!=" => a(in, v) != b(in, v)
+        case "<=" => a(in, v).toString <= b(in, v).toString
+        case ">=" => a(in, v).toString >= b(in, v).toString
+        case "<" => a(in, v).toString < b(in, v).toString
+        case ">" => a(in, v).toString > b(in, v).toString
+        case _ => error ("Operator " + s + " UNKNOWN!!!")
+        } 
+     }
 
 object WCFExpr extends WCFExpr {
   def parseXExpr (s:String) = parseAll(expr, s) get
@@ -91,25 +127,8 @@ trait WCFExpr extends JavaTokenParsers {
   def lt : Parser[BExpr] = expr~"<"~expr ^^ { case a~s~b => cmp(a,s,b) }
   def gt : Parser[BExpr] = expr~">"~expr ^^ { case a~s~b => cmp(a,s,b) }
   
-  def bcmp (a:BExpr, s:String, b:BExpr) = new BExpr (a+" "+s+" "+b) {
-     override def eval (in:AC, v:Any) = s match {
-        case "||" => a.eval(in, v) || b.eval(in, v)
-        case "&&" => a.eval(in, v) && b.eval(in, v)
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
-        } 
-     }
-  
-  def cmp (a:XExpr, s:String, b:XExpr) = new BExpr (a+" "+s+" "+b) {
-     override def eval (in:AC, v:Any) = s match {
-        case "==" => a.eval(in, v) == b.eval(in, v)
-        case "!=" => a.eval(in, v) != b.eval(in, v)
-//        case "<=" => a.eval(in, v) <= b.eval(in, v)
-//        case ">=" => a.eval(in, v) >= b.eval(in, v)
-//        case "<" => a.eval(in, v) < b.eval(in, v)
-//        case ">" => a.eval(in, v) > b.eval(in, v)
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
-        } 
-     }
+  def bcmp (a:BExpr, s:String, b:BExpr) = new BCMP1 (a,s,b)
+  def cmp  (a:XExpr, s:String, b:XExpr) = new BCMP2 (a,s,b)
 
 }
 
@@ -155,19 +174,6 @@ trait WCFBase extends WCFExpr {
 //  def fident: Parser[XExpr] = ident ^^ {s => new XExpr { override def eval (in:AC) = in a s } }
 //  def ffp: Parser[XExpr] = floatingPointNumber ^^ {s => new XExpr { override def eval (in:AC) = s.toFloat } }
 //  def fstr: Parser[XExpr] = stringLiteral ^^ {s => new XExpr { override def eval (in:AC) = s } }
-  
- 
-  trait XExpr extends WFunc[Any] {
-    override def exec (in:AC, prevValue:Any) : Any = eval (in, prevValue)
-    // basically rename exec to eval
-             def eval (in:AC, prevValue:Any) : Any 
-  }
-  
-  trait BExpr extends WFunc[Boolean] {
-    override def exec (in:AC, prevValue:Any) : Boolean = eval (in, prevValue)
-    // basically rename exec to eval
-             def eval (in:AC, prevValue:Any) : Boolean 
-  }
   
   def parseitman (s:String) = parseAll(wfdefn, s)
 } 

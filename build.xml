@@ -10,6 +10,7 @@
         <pathelement location="../razweb/bin/"/>
         <pathelement location="../razxml/dist/razxml.jar"/>
         <pathelement location="${scala.home}/lib/scala-compiler.jar"/>
+        <pathelement location="../scripster/bin/"/>
     </path>
 
     <target name="run">

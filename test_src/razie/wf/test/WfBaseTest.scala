@@ -40,7 +40,7 @@ class WfBaseTest extends JUnit3Suite {
   def testwif11 = expect (2) { wif1.print run 1 }
   def testwif12 = expect (4) { wif1.print run 2 }
   def testwif21 = expect (2) { wif2.print run 1 }
-  def testwif22 = expect (3) { wif2.print run 2 } // TODO should be 4...currently not implemented properly :)
+  def testwif22 = expect (3) { wif2.print run 2 } 
   def testwif23 = expect (3) { wf(wif2s) run 2 }
   def testwif23s = expect (2) { wf(wif3s) run 2 }
   def testwif24 = expect (3) { wf((wf toDsl wif2).print).print run 2 }
@@ -91,6 +91,11 @@ par {
   def testwpar4 = expect (2::2::Nil) { (wf(wpar4) run 1) }
   def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }
 
+  // make sure it's actually ran in paralel
+  def wparp = sleep(1000) | sleep(1000)
+  def testwparp = expect (true) { val i1 = System.currentTimeMillis; wparp.print run 1; System.currentTimeMillis - i1 < 1500 }
+  
+  
   //-------------------------- match/case
   
   def wm1 = wmatch2 ($0) {

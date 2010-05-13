@@ -46,5 +46,4 @@ object bpel extends WfLib[WfAct] {
   
   def faultHandlers = todo
   
-  
 }

@@ -10,7 +10,7 @@ import razie.actionables._
 
 /** no arguments or expressions of any kind */
 class Wfe0 (override val wname:String) extends WfExec with HasDsl {
-  override def exec(in:AC, v:Any) = v
+  override def apply(in:AC, v:Any) = v
   override def toDsl = wname
 }
 
@@ -35,14 +35,22 @@ trait WfBaseLib[T] extends WfLib[T] {
   me =>
 
   //------------------- expressions 
-  def $0 = new $Expr ("0")
+  /** the implicit local value */
+  def $0 = new $Expr ("0")                 
+  /** a value by name from context */
   def $ (name:String) = new $Expr (name)
+  /** a constant value */
+  def $C(name:Any) = new CExpr (name)
   
   implicit def xe  (sc:String) = new XExpr (sc)
   implicit def xei (sc:Int) = new CExpr (sc)
   
   // nop if you need an empty activity - maybe required by the syntax
   def nop  = me wrap new Wfe0 ("nop")
+  
+  def sleep (i:XExpr) = me wrap new WfeSleep (i)
+  def sleep (i:String) = me wrap new WfeSleep (WCFExpr parseXExpr i)
+  def sleep (i:Int=1) = me wrap new WfeSleep (WCFExpr parseXExpr i.toString)
   
   def inc (i:XExpr) = me wrap new WfeInc (i)
   def inc (i:String) = me wrap new WfeInc (WCFExpr parseXExpr i)
@@ -57,11 +65,12 @@ trait WfBaseLib[T] extends WfLib[T] {
   def log (m: XExpr) = me wrap new WfeLog (m)
   
   // assign
-  def assign (name:String) (value: =>Any) = me wrap new WfeAssign (name)((x)=>value)
+//  def assign (name:String) (value: =>Any) = me wrap new WfeAssign (name)((x)=>value)
+  def assign (name:String, e:XExpr) = me wrap new WfeAssign (name, e)
 
   // TODO scripted activities can migrate easily anywhere, eh?
   implicit def s      (sc:String) = script ("?", "scala", sc)
-  def scala  (sc:String) = script ("?", "scala", sc)
+  def sscala  (sc:String) = script ("?", "scala", sc)
   def js     (sc:String) = script ("?", "js", sc)
   def script (name:String, lang:String, s:String) = WfeScript (lang, s)
   
@@ -96,48 +105,56 @@ trait WCFBaseLib extends WCFExpr {
 
 class WfeAction (ustr:String) extends Wfe0 ("act:"+ustr) {
   val ac = ActFactory.make("?", ustr)
-  override def exec (in:AC, prevValue:Any) = ac.execute() 
+  override def apply (in:AC, prevValue:Any) = ac.execute() 
 }
 
 case class WfeScript (lang:String, scr:String) extends WfExec {
   val sc = razie.base.scripting.ScriptFactory.make (lang, scr)
   
-  override def exec (in:AC, prevValue:Any) = { 
+  override def apply (in:AC, prevValue:Any) = { 
     sc.eval(new razie.base.scripting.ScalaScriptContext (in, "$0", prevValue))
   }
   
   override def wname = "act - " + scr
 }
 
-class WfeAssign (name:String) (v: Any => Any) extends WfExec {
-  override def exec (in:AC, prevValue:Any) = { 
-    in.set (name, v(prevValue))
-    prevValue
+class WfeAssign (name:String, e:XExpr) extends WfExec {
+  override def apply (in:AC, prevValue:Any) = name match {
+     case "0" => e(in, prevValue)
+     case _ => {
+        in.set (name, e(in, prevValue))
+        prevValue
+     }
   }
   
   override def wname = "assign"
 }
 
 class WfeLog (e:XExpr) extends Wfe1 ("log", e) { 
-  override def exec  (in:AC, prevValue:Any) : Any = {
-    val v = e.eval(in, prevValue)
+  override def apply  (in:AC, prevValue:Any) : Any = {
+    val v = e.apply(in, prevValue)
     println (v.toString)
     v
   }
 }
 
 class WfeInc (e:XExpr) extends Wfe1 ("inc", e) { 
-  override def exec  (in:AC, prevValue:Any) : Any = 
+  override def apply  (in:AC, prevValue:Any) : Any = 
     (if (prevValue.isInstanceOf[Int]) prevValue.asInstanceOf[Int] else prevValue.toString.toInt) + 
-    e.eval(in, prevValue).toString.toInt
+    e.apply(in, prevValue).toString.toInt
 }
   
 class WfeDec (e:XExpr) extends Wfe1 ("dec", e) { 
-  override def exec  (in:AC, prevValue:Any) : Any = 
-    prevValue.asInstanceOf[Int] - e.eval(in, prevValue).toString.toInt
+  override def apply  (in:AC, prevValue:Any) : Any = 
+    prevValue.asInstanceOf[Int] - e.apply(in, prevValue).toString.toInt
 }
   
 class WfeSet (newV:XExpr) extends Wfe1 ("set", newV) { 
-  override def exec  (in:AC, prevValue:Any) : Any = newV.eval(in, prevValue)
+  override def apply  (in:AC, prevValue:Any) : Any = 
+    newV.apply(in, prevValue)
+}
+  
+class WfeSleep (e:XExpr) extends Wfe1 ("sleep", e) { 
+  override def apply  (in:AC, prevValue:Any) : Any = Thread sleep e.apply(in, prevValue).toString.toInt
 }
   

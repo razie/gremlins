@@ -27,7 +27,7 @@ public class ExecTelnet implements IExecutable {
 			"host=localhost,port=21,cmd"), new AttrAccessImpl("result"));
 
 	@Override
-	public Object exec(ActionContext in, Object v) {
+	public Object apply(ActionContext in, Object v) {
 		AttrAccess newin = new razie.WrapAttrAccess((AttrAccess)in);
 		String host = (String) newin.getAttr("host");
 		String port = (String) newin.getAttr("port");

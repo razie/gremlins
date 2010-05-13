@@ -143,7 +143,7 @@ case class WfMatch2 (
       val branches : Seq[WfCase2[_]]
       ) extends WfMatchBase {
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
-    val e = expr.eval (in, v)
+    val e = expr.apply (in, v)
     val res = others.filter (g => g.z.asInstanceOf[WfCase2[_]].apply(e))
     
     (v,

@@ -8,12 +8,25 @@ package razie.wf
 import razie.base.ActionContext
 
 /** basic executable/actionable interface  */
-trait WFunc[T] { // extends PartialFunc ?
-  def exec (in:ActionContext, prevValue:Any) : T
+trait WFunc[T <: Any] { // extends PartialFunc ?
+  def apply (in:ActionContext, prevValue:Any) : T
 }
 
+/** use for defaults */
+object WFuncNil extends WFunc[Any] {
+  override def apply (in:ActionContext, prevValue:Any) : Any = prevValue
+  
+  def == (a:Any, b:Any) : Boolean = a == b
+}
+
+/** use for defaults */
+case class WFCMP[T <: Any] (to:T, how: (Any,Any) => Boolean = WFuncNil.==) extends WFunc[Boolean] {
+  override def apply (in:ActionContext, prevValue:Any) : Boolean = how(prevValue, to)
+}
+
+/** java friendly WFunc */
 trait JWFunc extends WFunc[Any] {
-  override def exec (in:ActionContext, prevValue:Any) : Any
+  override def apply (in:ActionContext, prevValue:Any) : Any
 }
 
 //-------------------- serialization: not the best idea...but
@@ -32,5 +45,10 @@ trait HasDsl /*extends GReferenceable*/ {
 /** TODO could be better */
 trait notisser /*extends GReferenceable*/ extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("class notisser")
+}
+
+/** TODO could be better */
+trait sertodo /*extends GReferenceable*/ extends HasDsl {
+  override def toDsl : String  = throw new UnsupportedOperationException ("serialization is TODO")
 }
 

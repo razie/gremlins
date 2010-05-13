@@ -82,7 +82,7 @@ public abstract class ActionableFactory {
                   for (Object o : args)
                      in.setAttr("arg" + String.valueOf(arg++), o);
 
-               result = a.executable.exec(in, null);
+               result = a.executable.apply(in, null);
 
             } else
                result = m.invoke(obj, args);

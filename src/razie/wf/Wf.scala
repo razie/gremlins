@@ -26,9 +26,10 @@ object wf extends WfBaseLib[WfAct] {
    
   override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
   
-  def toDsl (x:AnyRef) =
-    if (x.isInstanceOf[HasDsl]) x.asInstanceOf[HasDsl].toDsl 
-    else throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
+  def toDsl (x:AnyRef) = x match {
+     case a : HasDsl => a.toDsl 
+     case _ => throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
+  }
    
   //----------------- base activitities
    
@@ -45,8 +46,8 @@ object wf extends WfBaseLib[WfAct] {
   type FB = WFunc[Boolean]
   type Cond1 = Any => Boolean
   
-  implicit def wc0 (cond : => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond }
-  def wc1 (cond : Cond1) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond(v) }
+  implicit def wc0 (cond : => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond }
+  def wc1 (cond : Cond1) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond(v) }
   implicit def wc3 (script : String) : WFunc[Boolean] = WCFExpr parseBExpr script
 //  implicit def wc2 (e : BExpr) : WFunc[Boolean] = (x) => true // TODO evaluate the s
   
@@ -79,6 +80,8 @@ object wf extends WfBaseLib[WfAct] {
   
   def label (n:String, a : WfAct) = new WfLabel (n, a)
     
+//  def split (a : WfAct*) : WfAct = new WfSelectMany (a:_*)
+  
   /** bound this subgraph in a scope, if needed */
   def scope (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
      if (a.glinks.isEmpty) a
@@ -119,8 +122,8 @@ object wfs {
   type FB = WFunc[Boolean]
   type Cond1 = Any => Boolean
 
-  implicit def wc0 (cond : Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond }
-  def wc1 (cond : Any => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def exec (in:AC, v:Any) = cond(v) }
+  implicit def wc0 (cond : Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond }
+  def wc1 (cond : Any => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond(v) }
   
   def wuif (cond : FB) (f: => Unit)    = WfIf (cond, WfScala(()=>f))
   def wsif  (cond : FB) (f: => Any)     = WfIf (cond, WfScalaV0(()=>f))

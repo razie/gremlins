@@ -15,14 +15,14 @@ import razie.wf._
   case class WfSimple extends WfAct { 
     /** executing these means maybe doing something (in=>out) AND figuring out who's next */
     override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
-       case a : WfExec => (a.exec(in, v), glinks)
+       case a : WfExec => (a.apply(in, v), glinks)
        case _ => (v,glinks)
     }
   }
 
   /** simple activities just do their thing */
   case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
-    override def exec (in:AC, prevValue:Any) = wrapped.exec(in, prevValue)
+    override def apply (in:AC, prevValue:Any) = wrapped.apply(in, prevValue)
     override def toString : String = "wf." + wrapped.wname
     override def wname = wrapped.wname
     
@@ -71,48 +71,44 @@ import razie.wf._
 
   //------------------------- selector
 
-object Selblahblah {
-  def expr (in:AC, v:Any) = v
-}
-  
 /** selector activity - the basis for many other */
-case class WfSelOne (expr:(AC,Any) => Any = Selblahblah.expr) extends WfSimple { 
+case class WfSelOne (expr: WFunc[_] = WFuncNil) extends WfSimple { 
 
-  /** overwrite this if you wish...rather than pass it in */
-  def eval (in:AC, v:Any) : Any = expr (in, v)
-  
   /** executing these means maybe doing something (in=>out) AND figuring out who's next */
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
-    val sel = expr (in, v)
+    val sel = expr.apply (in, v)
     (v, glinks.filter(l => l.isInstanceOf[WLV] && l.asInstanceOf[WLV].selector == sel).headOption.toList)
   }
     
-  /** par depy a -> (b,c) */
-  def --> [T <: Any] (z:Map[T,WfAct]) = {
+  /** depy a -> (b,c) */
+  def --> [T <: Any] (z: => Map[T,WfAct]) = {
     glinks = z.map (p => new WLV(this,p._2,p._1)).toList
     this
   } 
-  /** par depy a -> (b,c) */
-  def +-> [T <: Any] (z:Map[T,WfAct]) = {
+  /** depy a -> (b,c) */
+  def +-> [T <: Any] (z: => Map[T,WfAct]) = {
+    glinks = glinks.toList ::: z.map (p => new WLV(this,p._2,p._1)).toList
+    this
+  } 
+  /** depy a -> (b,c) */
+  def +-> [T <: Any] (z:(T,WfAct)*) = {
     glinks = glinks.toList ::: z.map (p => new WLV(this,p._2,p._1)).toList
     this
   } 
 }
 
 /** selector activity - the basis for many other */
-case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple { 
+case class WfSelMany (expr:WFunc[_]) extends WfSimple { 
 
    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
-    val sel = expr (in, v)
+    val sel = expr.apply (in, v)
     (v, glinks.filter(l => l.isInstanceOf[WLV] && l.asInstanceOf[WLV].selector == sel))
   }
 }
 
   //-------------------------funky
   
-  case class WfLabel (name:String, aa:WfAct) extends WfProxy (aa) {
-     
-  }
+  case class WfLabel (name:String, aa:WfAct) extends WfProxy (aa)
   
   case class WfWhen (name:String, aa:WfAct) extends WfProxy (aa) {
     // TODO needs to find the labeled one
@@ -121,7 +117,10 @@ case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple {
   
   //------------------------------- seq / par
   
-  /** a sequence contains a list of proxies */
+  /** a sequence contains a list of proxies 
+   * 
+   * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
+   */
   case class WfSeq (a:WfAct*) extends WfAct with HasDsl {
     // wrap each in a proxy and link them in sequence
     gnodes = 
@@ -146,7 +145,10 @@ case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple {
     override def toDsl = "seq {\n" + gnodes.map(wf toDsl _).mkString("\n") + "\n}"
   }
 
-  /** TODO fork-join. The end will wait for all processing threads to be done */
+  /** fork-join. The end will wait for all processing threads to be done 
+   * 
+   * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
+   */
   case class WfPar (a:WfAct*) extends WfSimple with HasDsl {
     lazy val aj = new AndJoin()
     
@@ -168,64 +170,42 @@ case class WfSelMany (expr:(AC,Any) => Any) extends WfSimple {
 
   /** scala code with no input nor return values */
   case class WfScala (val f : () => Unit) extends WfSimple with WfExec { 
-     override def exec (in:AC, v:Any) : Any = { f(); v }
+     override def apply (in:AC, v:Any) : Any = { f(); v }
   }   
 
   /** scala code with a return value but no input */
   case class WfScalaV0 (val f : () => Any) extends WfSimple with WfExec { 
-     override def exec (in:AC, v:Any) : Any = f()
+     override def apply (in:AC, v:Any) : Any = f()
   }   
 
   /** scala code with input and return values */
   case class WfScalaV1 (val f : (Any) => Any) extends WfSimple with WfExec { 
-     override def exec (in:AC, v:Any) : Any = f(v)
+     override def apply (in:AC, v:Any) : Any = f(v)
   }   
 
   /** scala code with input and return values */
   case class WfScalaV1u (val f : (Any) => Unit) extends WfSimple with WfExec { 
-     override def exec (in:AC, v:Any) : Any = { f(v); v }
+     override def apply (in:AC, v:Any) : Any = { f(v); v }
   }   
 
 //---------------- if
 
 case class WfElse (t:WfAct)  extends WfScope (t) 
-  
-case class WfIf   (val cond : WFunc[Boolean], t:WfAct, var e:Option[WfElse] = None) extends WfAct with HasDsl {
-  gnodes = List(t) ::: e.toList
-  glinks = List (WL(this,t)) ::: e.map(WL(this,_)).toList
-   
-  /** return either branch, depending on cond */
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
-    if (cond.exec(in, v)) 
-      (v, glinks.first :: Nil)
-    else
-      (v, e.map(WL(this,_)).toList) // TODO not make new links, reuse those in the definition
-        
-   def welse (a:WfAct) : WfIf = {
-     if (e.isEmpty) {
-       this.e = Some(WfElse (a))
-       this +-> e.get
-     } else // oops, is this an welse wif welse?
-       this.e.first.t match {
-        case i : WfIf => i.welse(a)
-        case _ => razie.Error ("a second welse clause") // TODO cause syntax error
-     }
-     this
-   }
-  
-    override def toDsl = 
-       "if (" + (wf toDsl cond) + ") then " + (wf toDsl t) + 
-       (e map (" else " + _.toDsl)).mkString 
-}
 
-case class WfIf2   (val cond : Any => Boolean, t:WfAct, var e:Option[WfElse]) 
-extends WfSelOne ((in,v)=>cond(v)) {
+/** 
+ * if-then-else
+ * 
+ * NOTE this is a scoped activity - it will scope the enclosed sub-graphs when serialized
+ * TODO NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
+ */
+case class WfIf   (val cond : WFunc[Boolean], t:WfAct, var e:Option[WfElse] = None) 
+extends WfSelOne (cond) with HasDsl {
 
-  this +-> Map(true -> t)
-  e map (x => this +-> Map(false -> x))
+  this +-> (true -> t)
+  e map (x => this +-> (false -> x))
 
   // syntax helper
-   def welse (a:WfAct) : WfIf2 = {
+   def welse (a:WfAct) : WfIf = {
      if (e.isEmpty) {
        this.e = Some(WfElse (a)) // to make sure that for next welse is not empty
        this +-> Map(false -> this.e.get)
@@ -237,4 +217,7 @@ extends WfSelOne ((in,v)=>cond(v)) {
      this
    }
   
+  override def toDsl = 
+    "if (" + (wf toDsl cond) + ") then " + (wf toDsl t) + 
+    (e map (" else " + _.toDsl)).mkString 
 }

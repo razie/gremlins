@@ -7,13 +7,16 @@ package razie.wf
 
 import razie.AA
 import razie.base.{ActionContext => AC}
+import razie.g._
+import scala.actors._
+
 
 //-------------------- graph processing engine
 
 object Audit {
   private def audit (aa:AA) = razie.Audit (aa)
 
-  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) {// new session
+  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) {
      audit (razie.AA("activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
   }
 }
@@ -89,6 +92,7 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
     
   // the threads in progress these are all in parallel
   var currThreads : Seq[ProcessThread] = new ProcessThread (start, None, ctx, startV) :: Nil
+  var countThreads = 0 // yeah, 0 is correct
   var oldThreads : Seq[ProcessThread] = Nil // don't know why i keep these
 
   // progress all threads - this is temp until I get the threading done
@@ -100,8 +104,9 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
     lastV = v
     n
   }
-    
-  def done () : Boolean = currThreads.isEmpty
+
+  // if ran sync, theaads list is relevant . when async, count is relevant
+  def done () : Boolean = currThreads.isEmpty || countThreads <= 0
   
   def persist = "" // TODO
   def recover (s:Any) {} // TODO
@@ -109,7 +114,66 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
 
 /** the engine is more complicated in this case, basically graph traversal */
 class Engine { 
+
+  import Actor._
+   
+  // TODO multithread
+  val processor : Actor = actor {
+    var i = 0
+    loop { 
+       react {
+         case m @ _=> { processors(i) ! m; i = (i+1) % 5 }
+    }}
+  }
+    
+  // TODO multithread
+  val processors : Array[Actor] = Array.fill (5) {actor {
+    loop { react {
+       case Tick(p,a) => {
+         p.currThreads.map(processor ! Tack(p, _, a))
+               
+         if (p.done) a ! Done(p) // how to return the value?
+       }
+       
+       case Tack(p,t,a) => {
+         p.countThreads -= 1
+         p.tick (t) map (processor ! Tack(p, _, a))
+          
+         if (p.done) a ! Done(p) // how to return the value?
+       }
+    }}
+  }
+  }
+    
+  case class Start (p:Process)
+  case class Tick (p:Process, result:Actor)
+  case class Tack (p:Process, t:ProcessThread, result:Actor) { p.countThreads += 1 }
+  case class Pre (p:Process)
+  case class Done (p:Process)
+  
   def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
+    val p = new Process (start, ctx, startV)       
+
+    val me : Actor = new Actor {
+      override def act () = receive {
+       case Start(p) => {
+          preProcess(p)
+          processor ! Tick (p, this)
+          receive { 
+            case Done(p) => 
+          }
+          reply()
+       }
+    }
+    }
+
+    me.start
+    me !? Start(p) // just wait, discard reply
+
+    p.lastV 
+  }
+  
+  def execSync (start:WfAct, ctx:AC, startV:Any) : Any = {
     val p = new Process (start, ctx, startV)       
 
     preProcess (p)
@@ -130,12 +194,23 @@ class Engine {
   def checkpoint () {}
 }
 
+
+
 object Engines {
   def apply () = new Engine()
 }
 
+abstract class ProcessWaitingOnRes (eng:Engine, who:ProcessThread, res:WRes) extends WResUser {
+  /** an acquire finished */
+  override def notifyAcquired (reply:WRes#ReqReply) = {}
+  
+  /** a wait finished */
+  override def notifyReply (reply:WRes#ReqReply) = {}
 
-
+  /** the resource screwed up - all outstanding requests were dismissed */
+  override def notifyScrewup (who:WRes) = {}
+}
+  
 /** the special activities that control the engine itself - hopefully as few as possible */
 object wfeng {
   // TODO start a new process
@@ -143,7 +218,7 @@ object wfeng {
   // TODO start a new sub-process of the current process
   def subprocess (root:WfAct) : WfAct = wf.todo
   
-  // TODO start a new sub-process of the current process
+  // join parallel branches - it's basically a barrier: when all branches arrive here, it will continue
   def andjoin (a:WfAct*) : WfAct = wf.todo
 }
 
@@ -166,6 +241,7 @@ case class AndJoin extends WfAct with AJState {
   /** waiting for all incoming branches and concatenating their values */
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
      throw new IllegalStateException ("method should never be called")
+  
   override def traverse (from:Option[WL], in:AC, v:Any) : (Any,Seq[WL]) = {
     addLink (from.get, v) // TODO null should bomb indicating andjoin with no branches in...
     if (prev.size == incoming.size) (prev.values map (x => x) toList, glinks) // I'm done

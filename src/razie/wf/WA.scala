@@ -43,8 +43,8 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   override def toString : String = this.getClass().getSimpleName + "()"
   
   // syntax niceties 
-  def + (e:WfAct) = WfSeq (this,e)
-  def | (e:WfAct) = WfPar (this,e)
+  def + (e:WfAct) : WfAct = WfSeq (this,e)
+  def | (e:WfAct) : WfAct = WfPar (this,e)
   
   def print () : WfAct = { println (this mkString); this}
   
@@ -56,9 +56,9 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
 
   // -------------- specific to WF? could move down?
   
-  /** point all leafs to z - an end node */
+  /** point all leafs to z, an end node, while avoiding z --> z */
   def --| (z:WfAct)(implicit linkFactory: LFactory)  = {
-    ( razie.g.Graphs.filterNodes[WfAct,WL](this) {z => z.glinks.isEmpty} ) foreach (i => i +-> z)
+    ( razie.g.Graphs.filterNodes[WfAct,WL](this) {a => a.glinks.isEmpty && a != z} ) foreach (i => i +-> z)
     this
   }
  
@@ -68,47 +68,9 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
 case class WL (a:WfAct, z:WfAct) extends razie.g.GLink[WfAct] with WflState 
 
 /** special link with a selector value. it assists the parent in deciding where to go next */
-case class WLV (aa:WfAct, zz:WfAct, val selector:Any) extends WL (aa,zz)
-  
-/** starting to add syntax niceties, implementation-transparent */
-//trait WfAct extends WA {
-//  this : WfAct => 
-   
-//  def + (e:WfAct) = WfSeq (this,e)
-//  def | (e:WfAct) = WfPar (this,e)
-//  
-//  // simplified execution
-//  def run (initialValue : Any) : Any = 
-//    Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
-//
-//  implicit val linkFactory : LFactory = (x,y) => WL(x,y)
-//
-//  // -------------- specific to WF? could move down?
-//  
-//  /** point all leafs to z - an end node */
-//  def --| ( z:WfAct)(implicit linkFactory: LFactory)  = {
-//    // find all leafs and connect them to me
-//    ( razie.g.GStuff.filterNodes[WA,WL](this) {z => z.glinks.isEmpty} ) foreach (i => i +-> z)
-//    this
-//  }
-// 
-//  type N = WfAct
-//  type NN = WA
-//  
-//  //----------------------- fix the return type for base functions
-//  // if we remove this, you get some freaky type casts I don't fully understand
-//    /** reroute */
-//  override def --> (z:NN)(implicit linkFactory: LFactory) : N = 
-//    super.-->(z).asInstanceOf[WfAct]
-//  /** add a new dependency */
-//  override def +-> ( z:NN)(implicit linkFactory: LFactory) : N = 
-//    super.-->(z).asInstanceOf[WfAct]
-//  /** par depy a -> (b,c) */
-//  override def --> (z:Seq[NN])(implicit linkFactory: LFactory) : N =
-//    super.-->(z).asInstanceOf[WfAct]
-//  /** par depy a -> (b,c) */
-//  override def +-> ( z:Seq[NN])(implicit linkFactory: LFactory) : N =
-//    super.-->(z).asInstanceOf[WfAct]
-
-//}
+case class WLM (aa:WfAct, zz:WfAct, val selector:WFunc[Boolean]) extends WL (aa,zz)
+ 
+/** special link with a selector value. it assists the parent in deciding where to go next */
+//case class WLV (aaa:WfAct, zzz:WfAct, val aselector:Any) extends WLM (aaa,zzz, WFCMP(aselector))
+case class WLV (aaa:WfAct, zzz:WfAct, val selector:Any) extends WL (aaa,zzz)
 

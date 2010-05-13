@@ -13,7 +13,7 @@ import java.awt.event.KeyEvent;
 class ExecPlaykey () extends razie.actionables.IExecutable {
 	def spec = new ActionableSpec(razie.AA("key=A,ctrl=no,shift=no"), razie.AA("result"));
 
-   override def exec(in:ActionContext, v:Any):Any = {
+   override def apply(in:ActionContext, v:Any):Any = {
       var res = true
       val k=(in a "key").asInstanceOf[String]
      

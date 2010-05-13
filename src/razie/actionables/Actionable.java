@@ -27,6 +27,6 @@ public class Actionable {
 	}
 
 	public Object execute() {
-		return this.executable.exec(inArgs, null);
+		return this.executable.apply(inArgs, null);
 	}
 }

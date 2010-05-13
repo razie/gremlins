@@ -13,7 +13,7 @@ import razie.actionables.util.WinExec
 class ExecCmdline (wait:Boolean = false) extends razie.actionables.IExecutable {
 	def spec = new ActionableSpec(razie.AA("cmd=uname -A"), razie.AA("result"));
 
-    override def exec(in:ActionContext, v:Any):Any = {
+    override def apply(in:ActionContext, v:Any):Any = {
       var res : Any = "?"
 
       val cmd = if (in isPopulated "cmd") in sa "cmd" else if (v == null) "" else v.toString
