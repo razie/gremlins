@@ -36,7 +36,8 @@ class XExprPLUS (a:XExpr, b:XExpr) extends XExpr ("+") {
   override def apply (in:AC, v:Any) : Any = a(in, v).toString + b(in,v).toString
 }
 
-case class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) with notisser {
+// TODO i'm looksing the type definition
+case class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) {
   override def apply (in:AC, v:Any) : Any = ee
 }
 

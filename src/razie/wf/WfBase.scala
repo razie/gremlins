@@ -23,7 +23,11 @@ import razie.wf._
   /** simple activities just do their thing */
   case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
     override def apply (in:AC, prevValue:Any) = wrapped.apply(in, prevValue)
-    override def toString : String = "wf." + wrapped.wname
+    override def toString : String = wrapped match {
+       case d:notisser => "wf." + wrapped.wname
+       case d:HasDsl => d.toDsl
+       case _ => "wf." + wrapped.wname
+    }
     override def wname = wrapped.wname
     
     override def toDsl = wf toDsl wrapped
@@ -116,31 +120,55 @@ case class WfSelMany (expr:WFunc[_]) extends WfSimple {
   }
   
   //------------------------------- seq / par
+ 
+  /** do not break */
+  abstract class WfBound extends WfSimple {
+    def lastAct : WfAct
+     
+  /** reroute */
+    override def --> [T<:WfAct] (z:T)(implicit linkFactory: LFactory) : WfAct = {
+      lastAct.glinks = linkFactory(lastAct,z) :: Nil
+      this
+    }
+  /** add a new dependency */
+    override def +-> [T<:WfAct](z:T)(implicit linkFactory: LFactory) : WfAct = {
+      lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: List(linkFactory (lastAct, z))
+      this
+    }
+  /** par depy a -> (b,c) */
+    override def --> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
+      lastAct.glinks = z.map (linkFactory(lastAct,_)).toList
+      this
+    }   
+  /** par depy a -> (b,c) */
+    override def +-> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
+      lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: z.map (linkFactory(lastAct,_)).toList
+      this
+    } 
+  }
   
   /** a sequence contains a list of proxies 
    * 
    * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
    */
-  case class WfSeq (a:WfAct*) extends WfAct with HasDsl {
+  case class WfSeq (a:WfAct*) extends WfBound with HasDsl {
+    override def lastAct : WfAct = glinks.lastOption.map(x=>gnodes.last).getOrElse(this)
+    
     // wrap each in a proxy and link them in sequence
     gnodes = 
       a.foldRight (Nil:List[WfAct])((x,l) => wf.scope(x,l.headOption.map(WL(x,_)).toList:_*) :: l)
     glinks = gnodes.firstOption.map(WL(this,_)).toList
     
-   
-    /** does nothing just returns the first in list */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v, glinks)
-   
     // to avoid seq(seq(t)) we redefine to just link to what i already have
     override def + (e:WfAct) = {
       val p = wf.scope(e)
       if (glinks.lastOption.isDefined)
-        gnodes.last --> p
+        gnodes.last --| p
       else 
        glinks = List(WL(this,p)) 
-     gnodes = gnodes.toList ::: List(p) 
-     this
-     }
+      gnodes = gnodes.toList ::: List(p) 
+      this
+      }
     
     override def toDsl = "seq {\n" + gnodes.map(wf toDsl _).mkString("\n") + "\n}"
   }
@@ -149,12 +177,14 @@ case class WfSelMany (expr:WFunc[_]) extends WfSimple {
    * 
    * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
    */
-  case class WfPar (a:WfAct*) extends WfSimple with HasDsl {
+  case class WfPar (a:WfAct*) extends WfBound with HasDsl {
     lazy val aj = new AndJoin()
     
     gnodes = a map wf.scope
     glinks = gnodes map (x => WL(this,x))
     this --| aj
+    
+    override def lastAct : WfAct = glinks.lastOption.map(x=>gnodes.last).getOrElse(this)
     
     // to avoid par(par(t)) we redefine to just link to what i already have
     override def | (e:WfAct) = {

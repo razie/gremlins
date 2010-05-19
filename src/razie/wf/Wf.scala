@@ -87,7 +87,7 @@ object wf extends WfBaseLib[WfAct] {
      if (a.glinks.isEmpty) a
      else new WfScope (a)
      
-  implicit val linkFactory = (x,y) => WL(x,y)
+//  implicit val linkFactory = (x,y) => WL(x,y)
   
   /** bound this subgraph in a scope, if needed */
   def scope (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope

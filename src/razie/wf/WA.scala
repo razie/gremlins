@@ -61,6 +61,9 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
     ( razie.g.Graphs.filterNodes[WfAct,WL](this) {a => a.glinks.isEmpty && a != z} ) foreach (i => i +-> z)
     this
   }
+  
+  def <-- (z:WfAct) : WfAct =  z --> this
+  def <-+ (z:WfAct) : WfAct =  z +-> this
  
 }
  

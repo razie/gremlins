@@ -34,21 +34,23 @@ trait WRes extends GReferenceable {
   def quit (who:WResUser, token:String)
 
   /** notify quit of whatever request outstanding - NOT a blocking call */
-  def req (who:WResUser, token:String, what:String, attrs:AC, value:Any) : ReqReply
-
-  case class ReqReply (who:WResUser, token:String)
-  case class RROK     (wwho:WResUser, ttoken:String, result:Any) extends ReqReply (wwho, ttoken)
-  case class RRERR    (wwho:WResUser, ttoken:String, err:Any) extends ReqReply (wwho, ttoken)
-  case class RRWAIT   (wwho:WResUser, ttoken:String) extends ReqReply (wwho, ttoken)
+  def req (r:WResReq) : WResReqReply
 }
+
+  case class WResReq (who:WResUser, token:String, what:String, attrs:AC, value:Any)
+  
+  case class WResReqReply (who:WResUser, token:String)
+  case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WResReqReply (wwho, ttoken)
+  case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WResReqReply (wwho, ttoken)
+  case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WResReqReply (wwho, ttoken)
 
 /** a resource user - notification API basically */
 trait WResUser extends GReferenceable {
   /** an acquire finished */
-  def notifyAcquired (reply:WRes#ReqReply)
+  def notifyAcquired (reply:WResReqReply)
   
   /** a wait finished */
-  def notifyReply (reply:WRes#ReqReply)
+  def notifyReply (reply:WResReqReply)
 
   /** the resource screwed up - all outstanding requests were dismissed */
   def notifyScrewup (who:WRes)
@@ -57,25 +59,39 @@ trait WResUser extends GReferenceable {
 //-----------------
 
 trait WfResState extends WfaState {
-  var reply : Option[WRes#ReqReply] = None
+  var reply : Option[WResReqReply] = None
 }
 
 /** an activity on a resource - the only one that can wait */
-case class WfResAct (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct with WfResState { 
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
-     throw new IllegalStateException ("method should never be called")
+case class WfResReq (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct with WfResState { 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
   
-//  def req (who:WResUser, token:String, in:AC, v:Any) =
-//    reply = AllResources resolve res map (_.req(who, token, what, attrs, value(in,v))) 
+  def req (r: WResReq) = 
+    AllResources resolve res map (_.req(r))
+//    AllResources resolve res map (_.req(who, token, what, attrs, value(in,v))) 
+  override def toString = "ResReq:" + res.meta+"."+what+" "+value
+}
+
+/** an activity on a resource - the only one that can wait */
+abstract class WfResReply extends WfAct with WfResState { 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
+  
+  def reply (r: WResReqReply) : Unit // keep state
+  override def toString = "ResReply"
 }
 
 object AllResources extends GResolver [WRes] {
   val resources = new scala.collection.mutable.HashMap[GRef, WRes]()
 
-  def add (res : WRes) : WRes = { resources += (res.key -> res); res }
-  def remove (key:GRef) { resources remove key }
+  def add (res : WRes) : WRes = synchronized { resources += (res.key -> res); res }
+  def remove (key:GRef) = synchronized { resources remove key }
   
-  override def resolve (key : GRef) : Option[WRes] = resources get key
+  override def resolve (key : GRef) : Option[WRes] = synchronized {resources get key}
+  def resolveOrCreate (key : GRef) (f: =>WRes) : Option[WRes] = synchronized {
+    if (! (resources contains key))
+       add (f)
+    resources get key
+    }
 }
 
 

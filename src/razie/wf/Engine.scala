@@ -5,20 +5,26 @@
  */
 package razie.wf
 
-import razie.AA
+import razie.{AA, Debug, Log}
 import razie.base.{ActionContext => AC}
 import razie.g._
 import scala.actors._
-
 
 //-------------------- graph processing engine
 
 object Audit {
   private def audit (aa:AA) = razie.Audit (aa)
 
-  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) {
-     audit (razie.AA("activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
-  }
+  def recStart  (a:Process, v:Any) = audit (razie.AA("Event", "START", "process", a.toString, "value", v.toString))
+  def recDone   (a:Process, v:Any) = audit (razie.AA("Event", "DONE", "process", a.toString, "value", v.toString))
+  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) =
+     audit (razie.AA("Event", "EXEC", "activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
+  def recResNotFound  (a:WfAct, res:GRef) =
+     audit (razie.AA("Event", "ERROR.resNotFound", "activity", a.toString, "res", res.toString))
+}
+
+trait WfControl {
+  def waiting (r:WRes, rr:WResReqReply)
 }
 
 /** 
@@ -26,13 +32,16 @@ object Audit {
  * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
  * conceptually these are independent paths of execution, for the PAR/JOIN branches for isntance
  */
-class ProcessThread (val start:WfAct, val startLink:Option[WL], val ctx:AC, val startValue:Any) { 
+class ProcessThread (val parent:Process, val start:WfAct, val startLink:Option[WL], val ctx:AC, val startValue:Any) { 
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
-     
+
   var currV:Any = startValue
      
   // the activity in progress
   var currAct : WfAct = null
+ 
+  // current resource waiting for...if any
+  var currReq : Option[WResReq] = None
     
   // the activities to start on the next step
   var nextAct   = start 
@@ -53,30 +62,31 @@ class ProcessThread (val start:WfAct, val startLink:Option[WL], val ctx:AC, val 
     preProcessing
 
     // execute action and return continuations: either myself or a bunch of spawns
+    
     val (out, next) = currAct.traverse(nextLink, ctx, currV)
     Audit.recExec  (currAct, currV, out, next.size)
     currV = out
 
     next map (_.linkState = LinkState.SELECTED)
     
-    val res = if (next.size == 1) {
+    val ret = if (next.size == 1) {
       nextLink = next.firstOption
       nextAct = next.first.z
       this :: Nil // myself continues
     } else {
       nextAct = null 
       if (next.size > 1) 
-         next.map (l=>new ProcessThread(l.z, Some(l), ctx, currV)) // // TODO what value to use for start here?
+         next.map (l=>new ProcessThread(parent, l.z, Some(l), ctx, currV)) // // TODO what value to use for start here?
         // note that I'm done in this case and replace myself with these spawns
       else 
         Nil // done - no continuations
     }
     
     postProcessing
-    (currV,res)
+    (currV,ret)
   }
     
-  def done () : Boolean = nextAct == null
+  def done () : Boolean = { val b = nextAct == null; Debug ("done: " + b); b}
 }
 
 /** 
@@ -91,22 +101,28 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
   var lastV = startV
     
   // the threads in progress these are all in parallel
-  var currThreads : Seq[ProcessThread] = new ProcessThread (start, None, ctx, startV) :: Nil
-  var countThreads = 0 // yeah, 0 is correct
+  var currThreads : Seq[ProcessThread] = new ProcessThread (this, start, None, ctx, startV) :: Nil
+  private[this]var countThreads = 0 // yeah, 0 is correct
   var oldThreads : Seq[ProcessThread] = Nil // don't know why i keep these
 
   // progress all threads - this is temp until I get the threading done
   def tick { currThreads = currThreads.flatMap(tick(_)) }
-   
+
+  def countThread (i:Int) = synchronized { this.countThreads += i }
+  
   // progress one thread - this would normally happen on its own thread
-  def tick (p:ProcessThread) : Seq[ProcessThread] = {
-    val (v,n) = p.move
-    lastV = v
+  def tick (t:ProcessThread) : Seq[ProcessThread] = {
+    val (v,n) = t.move
+    synchronized {
+    if (! t.currAct.isInstanceOf[AndJoin] || n.size <= 0)
+      lastV = v
+    }
+    Debug ("tick() lastV == " + lastV)
     n
   }
 
   // if ran sync, theaads list is relevant . when async, count is relevant
-  def done () : Boolean = currThreads.isEmpty || countThreads <= 0
+  def done () : Boolean = synchronized { val b = /*currThreads.isEmpty ||*/ countThreads <= 0 ; Debug ("done="+b+" currThreads="+currThreads.size+" countThreads="+countThreads); b }
   
   def persist = "" // TODO
   def recover (s:Any) {} // TODO
@@ -116,13 +132,22 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
 class Engine { 
 
   import Actor._
-   
-  // TODO multithread
+
+  val processes = new scala.collection.mutable.ListBuffer[Process]()
+  
+  // load balancer
   val processor : Actor = actor {
     var i = 0
     loop { 
        react {
-         case m @ _=> { processors(i) ! m; i = (i+1) % 5 }
+         case Exit => {
+            processors foreach (_ ! Exit)
+            exit (); 
+         }
+         case m @ _=> { 
+            processors(i) ! m; 
+            i = (i+1) % 5 
+         }
     }}
   }
     
@@ -130,30 +155,94 @@ class Engine {
   val processors : Array[Actor] = Array.fill (5) {actor {
     loop { react {
        case Tick(p,a) => {
-         p.currThreads.map(processor ! Tack(p, _, a))
+         val s = p.currThreads.map(Tack(p, _, a)).toList
+         p countThread s.size
+         s foreach (processor ! _)
                
          if (p.done) a ! Done(p) // how to return the value?
        }
        
        case Tack(p,t,a) => {
-         p.countThreads -= 1
-         p.tick (t) map (processor ! Tack(p, _, a))
+         val s = p.tick (t)
+         
+         t.currAct match {
+
+            case re : WfResReq => { // make the actual request
+              val cback = new WResUser {
+                override def key = GRef.id ("blahblah", "?")
+                def notifyAcquired (reply:WResReqReply) = processor ! Reply (p, t, reply, a) 
+                def notifyReply (reply:WResReqReply) = processor ! Reply (p, t, reply, a)
+                def notifyScrewup (who:WRes) = {
+                   processor ! Reply (p, t, null, a)
+                   throw new UnsupportedOperationException ("TODO") // TODO
+                }
+                }
+              
+              t.currReq = Some(new WResReq (cback, "?", re.what, re.attrs, re.value(t.ctx, t.currV)))
+              
+              Debug ("ENG.Req: "+t.currReq.get)
+              val rep = re.req(t.currReq.get) 
+              Debug ("ENG.Req returned: "+rep)
+              rep match {
+                 case ok@Some(WResRROK (w,tok,r)) => processor ! Reply (p,t,ok.get,a)
+                 case er@Some(WResRRERR (w,tok,e)) => processor ! Reply (p,t,er.get,a)
+                 case wa@Some(WResRRWAIT (w,tok)) =>  ;// current action waits
+                 case None => Audit.recResNotFound (re, re.res)
+              }
+            }
+            
+            // otherwise, normal activity, continue all remaining threads
+            case _ => {
+               p.synchronized {
+                 p countThread (s.size-1)
+                 // TODO err if first action on only thread is REQ then it will finish before reply
+                 if (p.done) { 
+                   Debug ("DOOOOOOOOOOOOOOOOOOONE"); 
+                   a ! Done(p) 
+                   assert (s.size == 0)
+                   } // how to return the value?
+                 } 
+               }
+               s map (processor ! Tack(p, _, a))
+            }
+         } // case Tack
+      
+       // retply from resource - continue original thread
+       case Reply(p,t,rr,a) => {
+         Debug ("ENG.Reply: "+rr)
+         t.nextAct match {
+            case re:WfResReply => {
+              t.currReq = None
+              re.reply (rr)
+              processor ! Tack(p, t, a)
+            }
+            case s@_ => throw new IllegalStateException ("WfResReq MUST be followed by a WfResReply, not a " + s)
+         }
           
-         if (p.done) a ! Done(p) // how to return the value?
+//         if (p.done) a ! Done(p) // how to return the value?
        }
+       
+       case Exit => exit ()
     }}
   }
   }
     
   case class Start (p:Process)
   case class Tick (p:Process, result:Actor)
-  case class Tack (p:Process, t:ProcessThread, result:Actor) { p.countThreads += 1 }
+  case class Tack (p:Process, t:ProcessThread, result:Actor) 
+  case class Reply (p:Process, t:ProcessThread, rr:WResReqReply, result:Actor)
   case class Pre (p:Process)
   case class Done (p:Process)
-  
-  def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
-    val p = new Process (start, ctx, startV)       
+  case class Exit 
 
+  def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
+    // wrap into begin/end
+    import wf._
+    val p = new Process (wf.scope(start), ctx, startV)       
+    processes += p
+
+    Audit.recStart (p, startV)
+    
     val me : Actor = new Actor {
       override def act () = receive {
        case Start(p) => {
@@ -167,10 +256,17 @@ class Engine {
     }
     }
 
+    
     me.start
     me !? Start(p) // just wait, discard reply
 
-    p.lastV 
+    val ret  = p.lastV
+    
+    Audit.recDone (p, ret)
+    
+    processes -= p
+    
+    ret
   }
   
   def execSync (start:WfAct, ctx:AC, startV:Any) : Any = {
@@ -192,20 +288,26 @@ class Engine {
   }
      
   def checkpoint () {}
+  
+  def stop {
+     if (! processes.isEmpty) 
+       throw new IllegalStateException ("there are still Processes in progress")
+     
+     processor ! Exit
+  }
 }
 
-
-
 object Engines {
-  def apply () = new Engine()
+  lazy val dflt = new Engine()
+  def apply () = dflt
 }
 
 abstract class ProcessWaitingOnRes (eng:Engine, who:ProcessThread, res:WRes) extends WResUser {
   /** an acquire finished */
-  override def notifyAcquired (reply:WRes#ReqReply) = {}
+  override def notifyAcquired (reply:WResReqReply) = {}
   
   /** a wait finished */
-  override def notifyReply (reply:WRes#ReqReply) = {}
+  override def notifyReply (reply:WResReqReply) = {}
 
   /** the resource screwed up - all outstanding requests were dismissed */
   override def notifyScrewup (who:WRes) = {}
@@ -242,9 +344,12 @@ case class AndJoin extends WfAct with AJState {
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = 
      throw new IllegalStateException ("method should never be called")
   
-  override def traverse (from:Option[WL], in:AC, v:Any) : (Any,Seq[WL]) = {
+  override def traverse (from:Option[WL], in:AC, v:Any) : (Any,Seq[WL]) = this.synchronized {
     addLink (from.get, v) // TODO null should bomb indicating andjoin with no branches in...
-    if (prev.size == incoming.size) (prev.values map (x => x) toList, glinks) // I'm done
+    Debug ("AndJoin " + "prev=" + prev.size + " incoming="+incoming.size)
+    if (prev.size == incoming.size) (prev.values.map(x => x).toList, glinks) // I'm done
     else (v, Nil) // current thread dies
   }
+  
+  override def toString = "AndJoin " + incoming.size 
 }

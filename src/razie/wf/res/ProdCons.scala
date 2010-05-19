@@ -18,6 +18,7 @@ class ListQueue[T] {
   def pull        : T = q remove 0
   def pullOption  : Option[T] = this removeOption 0
   def isEmpty = q.isEmpty
+  def size = q.size
   
   def removeOption (i:Int) : Option[T] = if (i < q.size) Some (q remove(i)) else None
 }
@@ -27,49 +28,55 @@ class WQueue (val name:String) extends WRes {
   override val key = GRef.id ("WQueue", name)
   
   val values = new ListQueue[Any]()
-  val consumers = new ListQueue[RRWAIT]()
+  val consumers = new ListQueue[WResRRWAIT]()
    
   /** request acquire of resource - NOT a blocking call */
-  override def acquire (who:WResUser, token:String) = RROK (who, token, null)
+  override def acquire (who:WResUser, token:String) = WResRROK (who, token, null)
   /** notify release of resource - NOT a blocking call */
-  override def release (who:WResUser, token:String) = RROK (who, token, null)
+  override def release (who:WResUser, token:String) = WResRROK (who, token, null)
   
   /** notify quit of whatever request outstanding - NOT a blocking call */
   override def quit (who:WResUser, token:String) = throw new UnsupportedOperationException ()
 
+  def push (a:Any) = { razie.Debug ("WQueue.push " + a); values push a}
+  def pull  = { val a = values.pull; razie.Debug ("WQueue.pull " + a); a}
+  def pop  = { val a = values.pop; razie.Debug ("WQueue.pop " + a); a}
+  
   /** notify quit of whatever request outstanding - NOT a blocking call */
-  override def req (who:WResUser, token:String, what:String, attrs:AC, value:Any) : ReqReply = what match {
+  override def req (r:WResReq) : WResReqReply = synchronized { 
+     debug ("pre "+r)
+     val ret = r.what match {
+    case ProdCons.CLEAR => {
+      consumers.q.clear 
+      values.q.clear 
+      WResRROK (r.who, r.token, r.value)
+    }
     case ProdCons.PUT => {
-       values push value
-       consumers.pullOption map (w => w.who notifyReply RROK (w.who, w.token, values.pull))
-       RROK (who, token, value)
+       this push r.value
+       consumers.pullOption map (w => w.who notifyReply WResRROK (w.who, w.token, this.pull))
+       WResRROK (r.who, r.token, r.value)
     }
     case ProdCons.GET => 
       if (values.isEmpty)
-        consumers push RRWAIT (who, token)
+        consumers push WResRRWAIT (r.who, r.token)
       else 
         consumers.pullOption map (w => {
-          w.who notifyReply RROK (w.who, w.token, values.pull)
-          consumers push RRWAIT (who, token)
+          w.who notifyReply WResRROK (w.who, w.token, this.pull)
+          consumers push WResRRWAIT (r.who, r.token)
         }) getOrElse
-          RROK (who, token, values.pop)
+          WResRROK (r.who, r.token, this.pop)
+    case s@_ => throw new IllegalArgumentException ("WHAT?? " + s)
   }
+     debug ("post "+r)
+     ret
+     }
+  
+  def clear = synchronized { consumers.q .clear(); values.q .clear }
+  def debug (msg:String) { razie.Debug ("WQueue: " + this.toString + " - "+msg+" consumers:"+consumers.size + " values="+values.size) }
 }
 
 object ProdCons {
   val PUT = "put"
   val GET = "get"
-     
-///** a resource user - notification API basically */
-//trait WResUser extends GReferenceable {
-//  /** an acquire finished */
-//  def notifyAcquited (reply:WRes#ReqReply)
-//  
-//  /** a wait finished */
-//  def notifyReply (reply:WRes#ReqReply)
-//
-//  /** the resource screwed up - all outstanding requests were dismissed */
-//  def notifyScrewup (who:WRes)
-//}
-
+  val CLEAR = "clear"
 }

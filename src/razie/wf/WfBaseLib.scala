@@ -7,6 +7,7 @@ package razie.wf
 
 import razie.base.{ActionContext => AC}
 import razie.actionables._
+import razie.g._
 
 /** no arguments or expressions of any kind */
 class Wfe0 (override val wname:String) extends WfExec with HasDsl {
@@ -28,6 +29,8 @@ abstract class Wfe2 (override val wname:String, val aa:razie.AA) extends WfExec 
 trait WfLib[T] extends WfLibrary[T] { 
   me =>
   def todo = me wrap new Wfe0 ("todo")
+  
+  implicit val linkFactory = (x,y) => WL(x,y)
 }
 
 /** basic library of executables */
