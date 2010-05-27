@@ -111,4 +111,6 @@ par {
   def testw3 = expect ("m Gigi") { wm1 run "Gigi" }
   def testw4 = expect ("m 1,2,3") { wm1.print run List(1,2,3) }
 
+  override def setUp () = { Engines.start }
+  override def tearDown () = { Engines().stop }
 }

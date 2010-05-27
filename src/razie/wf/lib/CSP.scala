@@ -25,20 +25,13 @@ trait CSP extends WfLib[WfAct] with WfBaseLib[WfAct] {
   me =>
    
   override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
-  
+
+  /** channel naming convention: it has to be unique in the same agent instance */
   object Channel {
      def apply (name:String) = WfChannel(name)
      def resolve (name:String) = AllResources.resolveOrCreate(GRef.id("WQueue", name)) { new CommChannel (name) }
   }
   
-//  class ChannelWrapper (val a:CommChannel) {
-//     def | (x:WfAct) = {}
-//  }
-//  
-//  class WfActWrapper (val a:WfAct) {
-//     def | (x:CommChannel) = {}
-//  }
-//  
   def clear (cname:String) = 
     WfChannel (cname) + 
     WfResReq (channelRef(cname), "clear", AA(), $0) +
@@ -84,10 +77,11 @@ case class WfChannel (cname:String, clear:Boolean = false) extends razie.wf.WfWr
   /** channels have a different meaining for this */
   override def | (x:WfAct) : WfAct = this + x
   
-//  override def ? (x:String) = this in x
-//  override def ? (x:$Expr) = this in x.name
-//  override def ! (x:String) = this out x
-//  override def ! (x:$Expr) = this out x.name
+  def ? (x:WfAct) = (this get $0) + x
+  def ? (x:$Expr) = this get x
+  def ! (x:$Expr) = this put x
+  def ! (x:String) = this put x
+  def ! (x:WfAct) = x + (this put $0)
      
   /** out from process into channel */
   def put (ve:XExpr) = { CSP.put (cname, ve) }
@@ -125,23 +119,30 @@ case class WfChannel (cname:String, clear:Boolean = false) extends razie.wf.WfWr
 */
 object PiCalc extends CSP {
 
-//  def v (name:String) = CSP.clear(name)
+  /** create or clear a channel */
   def v (name:String) = WfChannel(name, true)
+  /** create or clear a channel */
   def v (c:WfChannel) = WfChannel (c.cname, true)
 
+  /** stupid O activity */
   def O = log("O")
 }
 
+
+/** CSP examples */
 object CSPSamples extends Application {
   import CSP._
+  import PiCalc.v
  
   def P = log($0 + "-P")
   def Q = log($0 + "-Q")
   def T = log($0) // transparent
 
-  def myp = Channel("c") | P
+  def c = Channel("c") 
   
-//  def hoare = P?x
+  def myp41 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )
+  require ((myp41.print run "1").asInstanceOf[List[_]] contains "1-Q-P")
+  
   Engines().stop
 }
 
@@ -155,7 +156,6 @@ object PiSamples extends Application {
   def c = Channel("c") // channel c
   def x = $("x") // variable x
   
-  // declare channel - no effect really
   def myp11 = v(c) + P  // correct (v c) P
   require ((myp11.print run "1") == "1-P")
   

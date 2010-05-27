@@ -11,6 +11,7 @@ import razie.base.{ActionContext => AC}
 import razie.base.scripting._
 import razie.wf.lib._
 
+/** an expression */
 abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {
   override def toString = expr
   override def toDsl = expr

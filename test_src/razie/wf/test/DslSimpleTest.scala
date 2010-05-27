@@ -32,4 +32,6 @@ log($0)
 //  def w20 = wf.nop + wf.log($0 + ".") + wf.log($0 + ".")
 //  def testw20 = expect ("1..") { w20 run "1" }
 
+  override def setUp () = { Engines.start }
+  override def tearDown () = { Engines().stop }
 }

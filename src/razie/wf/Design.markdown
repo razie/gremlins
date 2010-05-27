@@ -5,7 +5,7 @@ Workflow engine design
 As mentioned in the vision, the components are:
 
 * generic graph-based processing engine
-Classes like <code>WA</code> and <code>WL</code> describe this level of the workflow.
+Classes like <code>WfAct</code> and <code>WL</code> describe this level of the workflow.
 * engine cooperation API (so remote engines can coordinate sub-workflows)
 * graph template-ing engine
 * basic activity library

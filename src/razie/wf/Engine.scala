@@ -134,6 +134,7 @@ class Engine {
   import Actor._
 
   val processes = new scala.collection.mutable.ListBuffer[Process]()
+  var stopped = false
   
   // load balancer
   val processor : Actor = actor {
@@ -289,17 +290,21 @@ class Engine {
      
   def checkpoint () {}
   
-  def stop {
+  def stop = synchronized {
      if (! processes.isEmpty) 
        throw new IllegalStateException ("there are still Processes in progress")
-     
+
+     stopped = true
      processor ! Exit
   }
 }
 
+// TODO implement a nice pool of engines
 object Engines {
-  lazy val dflt = new Engine()
-  def apply () = dflt
+  var dflt : Option[Engine] = None
+  def stop = synchronized { dflt map (_.stop); dflt = None }
+  def start = synchronized { stop; dflt = Some(new Engine()); dflt.get }
+  def apply () = synchronized { val e = (dflt getOrElse start); if (e.stopped) start else e }
 }
 
 abstract class ProcessWaitingOnRes (eng:Engine, who:ProcessThread, res:WRes) extends WResUser {

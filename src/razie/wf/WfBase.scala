@@ -11,69 +11,70 @@ import razie.wf._
 
 //-------------------------------- basic activities
 
-  /** simple activities just do their thing */
-  case class WfSimple extends WfAct { 
-    /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
-       case a : WfExec => (a.apply(in, v), glinks)
-       case _ => (v,glinks)
-    }
+/** simple activities just do their thing */
+case class WfSimple extends WfAct { 
+  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
+     case a : WfExec => (a.apply(in, v), glinks)
+     case _ => (v,glinks)
   }
+}
 
-  /** simple activities just do their thing */
-  case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
-    override def apply (in:AC, prevValue:Any) = wrapped.apply(in, prevValue)
-    override def toString : String = wrapped match {
-       case d:notisser => "wf." + wrapped.wname
-       case d:HasDsl => d.toDsl
-       case _ => "wf." + wrapped.wname
-    }
-    override def wname = wrapped.wname
+/** simple activities just do their thing */
+case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
+  override def apply (in:AC, prevValue:Any) = wrapped.apply(in, prevValue)
+  
+  override def toString : String = wrapped match {
+    case d:notisser => "wf." + wrapped.wname
+    case d:HasDsl => d.toDsl
+    case _ => "wf." + wrapped.wname
+  }
+  
+  override def wname = wrapped.wname
     
-    override def toDsl = wf toDsl wrapped
-  }
+  override def toDsl = wf toDsl wrapped
+}
 
-  //------------------- begin / end subgraph
+//------------------- begin / end subgraph
 
-  /** sub-graph root, control node: create new control node linking to all others */
-  case class WfStart (a:WfAct*) extends WfSimple {  a map (this --> _) }
+/** sub-graph root, control node: create new control node linking to all others */
+case class WfStart (a:WfAct*) extends WfSimple {  a map (this --> _) }
 
-  /** sub-graph end, control node: find all ends of subgraph and point to this end */
-  case class WfEnd (a:WfAct*) extends WfSimple { 
-    // find all leafs and connect them to me
-    (a flatMap ( x => razie.g.Graphs.filterNodes[WfAct,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
-  }
+/** sub-graph end, control node: find all ends of subgraph and point to this end */
+case class WfEnd (a:WfAct*) extends WfSimple { 
+  // find all leafs and connect them to me
+  (a flatMap ( x => razie.g.Graphs.filterNodes[WfAct,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
+}
 
-  /** 
-   * the new proxy: contains a sub-graph.
-   * will point to the entry point of its sub-graph and connect the end of it to itself.
-   */
-  case class WfScope (aa:WfAct, var l:WL*) extends WfStart (aa) with HasDsl { 
-    WfScopeEnd (aa, l:_*)
-    override def toDsl = "scope " + (wf toDsl aa)
-  }
+/** 
+ * the new proxy: contains a sub-graph.
+ * will point to the entry point of its sub-graph and connect the end of it to itself.
+ */
+case class WfScope (aa:WfAct, var l:WL*) extends WfStart (aa) with HasDsl { 
+  WfScopeEnd (aa, l:_*)
+  override def toDsl = "scope " + (wf toDsl aa)
+}
 
-  /** 
-   * special activity - ends a scope and points to where the scope was meant to point to
-   */
-  case class WfScopeEnd (s:WfAct, var l:WL*) extends WfEnd (s) { 
-    glinks = l.map(x=>{if (x.a == s) WL(this, x.z) else x})
-  }
+/** 
+ * special activity - ends a scope and points to where the scope was meant to point to
+ */
+case class WfScopeEnd (s:WfAct, var l:WL*) extends WfEnd (s) { 
+  glinks = l.map(x=>{if (x.a == s) WL(this, x.z) else x})
+}
 
-  /** note that this proxy is stupid... see WfElse to understand why... */
-  case class WfProxy (a:WfAct, var l:WL*) extends WfSimple { 
-    // if the depy was from a to someone, update it to be this to someone...?
-    glinks = l.map(x=>{if (x.a == a) WL(this, x.z) else x})
+/** note that this proxy is stupid... see WfElse to understand why... */
+case class WfProxy (a:WfAct, var l:WL*) extends WfSimple { 
+  // if the depy was from a to someone, update it to be this to someone...?
+  glinks = l.map(x=>{if (x.a == a) WL(this, x.z) else x})
     
-//    override def exec (in:AC, v:Any) : Any = a.exec(in, v)
-    /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (a.traverse(in, v)._1, glinks)
+  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (a.traverse(in, v)._1, glinks)
     
-    override def toString : String = 
-      this.getClass().getSimpleName + "()"
-  }
+  override def toString : String = 
+    this.getClass().getSimpleName + "()"
+}
 
-  //------------------------- selector
+//------------------------- selector
 
 /** selector activity - the basis for many other */
 case class WfSelOne (expr: WFunc[_] = WFuncNil) extends WfSimple { 
@@ -110,42 +111,42 @@ case class WfSelMany (expr:WFunc[_]) extends WfSimple {
   }
 }
 
-  //-------------------------funky
+//-------------------------funky
   
-  case class WfLabel (name:String, aa:WfAct) extends WfProxy (aa)
+case class WfLabel (name:String, aa:WfAct) extends WfProxy (aa)
   
-  case class WfWhen (name:String, aa:WfAct) extends WfProxy (aa) {
-    // TODO needs to find the labeled one
-    // TODO needs to wait 
-  }
+case class WfWhen (name:String, aa:WfAct) extends WfProxy (aa) {
+  // TODO needs to find the labeled one
+  // TODO needs to wait 
+}
   
-  //------------------------------- seq / par
+//------------------------------- seq / par
  
-  /** do not break */
-  abstract class WfBound extends WfSimple {
-    def lastAct : WfAct
+/** bounday of a subgraph: it acts like the head but all NEXT operations act on the end */
+abstract class WfBound extends WfSimple {
+  def lastAct : WfAct
      
   /** reroute */
-    override def --> [T<:WfAct] (z:T)(implicit linkFactory: LFactory) : WfAct = {
-      lastAct.glinks = linkFactory(lastAct,z) :: Nil
-      this
-    }
-  /** add a new dependency */
-    override def +-> [T<:WfAct](z:T)(implicit linkFactory: LFactory) : WfAct = {
-      lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: List(linkFactory (lastAct, z))
-      this
-    }
-  /** par depy a -> (b,c) */
-    override def --> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
-      lastAct.glinks = z.map (linkFactory(lastAct,_)).toList
-      this
-    }   
-  /** par depy a -> (b,c) */
-    override def +-> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
-      lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: z.map (linkFactory(lastAct,_)).toList
-      this
-    } 
+  override def --> [T<:WfAct] (z:T)(implicit linkFactory: LFactory) : WfAct = {
+    lastAct.glinks = linkFactory(lastAct,z) :: Nil
+    this
   }
+  /** add a new dependency */
+  override def +-> [T<:WfAct](z:T)(implicit linkFactory: LFactory) : WfAct = {
+    lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: List(linkFactory (lastAct, z))
+    this
+  }
+  /** par depy a -> (b,c) */
+  override def --> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
+    lastAct.glinks = z.map (linkFactory(lastAct,_)).toList
+    this
+  }   
+  /** par depy a -> (b,c) */
+  override def +-> [T<:WfAct] (z:Seq[T])(implicit linkFactory: LFactory) : WfAct = {
+    lastAct.glinks = lastAct.glinks.toList.asInstanceOf[List[WL]] ::: z.map (linkFactory(lastAct,_)).toList
+    this
+  } 
+}
   
   /** a sequence contains a list of proxies 
    * 

@@ -6,8 +6,17 @@
 package razie.wf
 
 import razie.base.ActionContext
+import razie.actionables._
 
-/** basic executable/actionable interface  */
+/** 
+ * Basic executable/actionable interface. These process a default input value and return a default output value.
+ * 
+ * They are also invoked in a context - a set of objects in a certain role.
+ * 
+ * There are two major branches: WFunc and WfAct. An action is a workflow specific thing and is aware of next actions, state of execution whatnot. It also does something so it's derived from WFunc. 
+ * 
+ * WFunc by itself only does something and is not stateful. Most activities are like that.
+ */
 trait WFunc[T <: Any] { // extends PartialFunc ?
   def apply (in:ActionContext, prevValue:Any) : T
 }
@@ -31,7 +40,7 @@ trait JWFunc extends WFunc[Any] {
 
 //-------------------- serialization: not the best idea...but
 
-/** deser is assumed via DSL */
+/** deserialization is assumed via DSL */
 trait HasDsl /*extends GReferenceable*/ {
   def serialize : String = toDsl
   
@@ -42,13 +51,34 @@ trait HasDsl /*extends GReferenceable*/ {
   def toDsl : String 
 }
 
-/** TODO could be better */
+/** 
+ * if A extends B which HasDsl but not is serializable, tag it with this
+ * 
+ * TODO could be better
+ */
 trait notisser /*extends GReferenceable*/ extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("class notisser")
 }
 
-/** TODO could be better */
+/** need to implement serialization
+ * 
+ * TODO could be better
+ */
 trait sertodo /*extends GReferenceable*/ extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("serialization is TODO")
 }
 
+//--------------------------- library stuff
+
+/** bridge the WFunc to the WfAct */
+trait WfExec extends WFunc[Any] {
+  def wname : String = "?"
+}
+
+/** libraries of executables should have this trait. You can have lib[WfAct] or lib[WfExec] or whatever */
+trait WfLibrary[T] { 
+  /** wraps an WfExec into a WfAct...customize this per implementation */
+  def wrap (e:WfExec) : T
+}
+
+// TODO need interface for progress, to be implemented by activities that can do stuff that takes time

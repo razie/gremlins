@@ -9,17 +9,10 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.g._
 
-//-------------------- engine/graph
-
-/** encapsulates the state of a workflow execution/traversal path */
-//trait WfThreadState {
-//  def comingFrom : WL
-//}
-
 /** 
- * the workflow is modelled as a graph of activities connected by links/dependencies.
- * 
  * This is the basic node in the graph: an activity waiting to be traversed/executed. 
+ * 
+ * The workflow is modelled as a graph of activities connected by links/dependencies.
  * 
  * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
@@ -52,11 +45,11 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   def run (initialValue : Any) : Any = 
     Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
 
-  implicit val linkFactory : LFactory = (x,y) => WL(x,y)
+  implicit val linkFactory : LFactory = (x,y) => WL(x,y) // for the nice inherited --> operators 
 
   // -------------- specific to WF? could move down?
   
-  /** point all leafs to z, an end node, while avoiding z --> z */
+  /** bound: point all leafs to z, an end node, while avoiding z --> z */
   def --| (z:WfAct)(implicit linkFactory: LFactory)  = {
     ( razie.g.Graphs.filterNodes[WfAct,WL](this) {a => a.glinks.isEmpty && a != z} ) foreach (i => i +-> z)
     this
@@ -64,7 +57,6 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   
   def <-- (z:WfAct) : WfAct =  z --> this
   def <-+ (z:WfAct) : WfAct =  z +-> this
- 
 }
  
 /** may want to store some color here...or have the link do something */

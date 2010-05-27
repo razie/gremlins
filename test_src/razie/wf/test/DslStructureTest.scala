@@ -12,4 +12,7 @@ class DslStructureTest extends JUnit3Suite {
   // ALL structure tests are in WfBaseTest - see that one
   
   def testNothing = expect (true) { true }
+  
+  override def setUp () = { Engines.start }
+  override def tearDown () = { Engines().stop }
 }

@@ -6,7 +6,6 @@ import junit.framework.TestSuite;
 import org.scalatest.junit._
 import org.scalatest.SuperSuite
 
-/** one suite to rule them all - run all tests in all shared projects */
 class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
   
   // this is where you list the tests...
@@ -15,6 +14,9 @@ class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslSimpleTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslStructureTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.MoreSamplesTest]))
+  
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.CspTest]))
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.PiTest]))
    
    def test1() = 
      // don't touch this line
