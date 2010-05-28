@@ -37,7 +37,7 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   
   // syntax niceties 
   def + (e:WfAct) : WfAct = WfSeq (this,e)
-  def | (e:WfAct) : WfAct = WfPar (this,e)
+  def | (e:WfAct*) : WfAct = WfPar (this,e.toSeq:_*)
   
   def print () : WfAct = { println (this mkString); this}
   
