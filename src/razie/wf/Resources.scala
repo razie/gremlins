@@ -63,21 +63,42 @@ trait WfResState extends WfaState {
 }
 
 /** an activity on a resource - the only one that can wait */
-case class WfResReq (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct with WfResState { 
+case class WfResReq (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct with HasDsl with WfResState { 
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
   
   def req (r: WResReq) = 
     AllResources resolve res map (_.req(r))
 //    AllResources resolve res map (_.req(who, token, what, attrs, value(in,v))) 
   override def toString = "ResReq:" + res.meta+"."+what+" "+value
+  override def toDsl = "ResReq(" + res.toString+", "+what+", "+value.toDsl+")"
 }
 
-/** an activity on a resource - the only one that can wait */
-abstract class WfResReply extends WfAct with WfResState { 
+/** follows a WfResReq and waits for a reply from the resource.
+ * 
+ * The default implementation here will simply remember the response value from resource and return it when 
+ * finishes running. 
+ * 
+ * Strongly suggest you do not overload this. If you need to, override the reply method to do whatever you want
+ */
+class WfResReply extends WfAct with HasDsl with WfResState { 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (rreply.map(_.result) getOrElse v,glinks.headOption.toList)
+  
+  var rreply:Option[WResRROK] = None
+
+  // TODO handle non-OK answers as well
+  /** process the reply from the resource. Normally keeps state somewhere as it will be followed by traverse() as the workflow continues */
+  def reply (r:WResReqReply) = rreply = Some(r.asInstanceOf[WResRROK])
+     
+  override def toString = this.toDsl
+  override def toDsl  = "ResReply"
+}
+
+/** a special resReply that ignores the value from the resource and just propagates the input value
+ */
+class WfResReplyIgnore extends WfResReply { 
   override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
   
-  def reply (r: WResReqReply) : Unit // keep state
-  override def toString = "ResReply"
+  override def toDsl  = "ResReplyIgnore"
 }
 
 object AllResources extends GResolver [WRes] {
@@ -93,5 +114,3 @@ object AllResources extends GResolver [WRes] {
     resources get key
     }
 }
-
-

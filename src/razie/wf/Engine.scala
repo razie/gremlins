@@ -105,8 +105,6 @@ class Process (val start:WfAct, val ctx:AC, val startV:Any) {
   private[this]var countThreads = 0 // yeah, 0 is correct
   var oldThreads : Seq[ProcessThread] = Nil // don't know why i keep these
 
-  // progress all threads - this is temp until I get the threading done
-  def tick { currThreads = currThreads.flatMap(tick(_)) }
 
   def countThread (i:Int) = synchronized { this.countThreads += i }
   
@@ -152,7 +150,6 @@ class Engine {
     }}
   }
     
-  // TODO multithread
   val processors : Array[Actor] = Array.fill (5) {actor {
     loop { react {
        case Tick(p,a) => {
@@ -269,13 +266,16 @@ class Engine {
     
     ret
   }
-  
+
+  /** TODO complete this sync execution - good for debugging or something...right now it's missing async resources */
   def execSync (start:WfAct, ctx:AC, startV:Any) : Any = {
     val p = new Process (start, ctx, startV)       
 
     preProcess (p)
     
-    while (!p.done) p.tick
+    // progress all threads - this is temp until I get the threading done
+    while (!p.done) 
+      { p.currThreads = p.currThreads.flatMap(p.tick(_)) }
       
     p.lastV 
   }

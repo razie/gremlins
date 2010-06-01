@@ -42,8 +42,8 @@ case class WfStart (a:WfAct*) extends WfSimple {  a map (this --> _) }
 
 /** sub-graph end, control node: find all ends of subgraph and point to this end */
 case class WfEnd (a:WfAct*) extends WfSimple { 
-  // find all leafs and connect them to me
-  (a flatMap ( x => razie.g.Graphs.filterNodes[WfAct,WL](x) {z => z.glinks.isEmpty} )) foreach (i => i +-> this)
+  // find all distinct leafs and connect them to me distint because 1->2->4 and 1->3->4
+  (a flatMap ( x => razie.g.Graphs.filterNodes[WfAct,WL](x) {z => z.glinks.isEmpty} )).distinct foreach (i => i +-> this)
 }
 
 /** 
@@ -171,7 +171,7 @@ abstract class WfBound extends WfSimple {
       this
       }
     
-    override def toDsl = "seq {\n" + gnodes.map(wf toDsl _).mkString("\n") + "\n}"
+    override def toDsl = "seq {\n" + (wf indent gnodes.map(wf toDsl _).mkString("\n")) + "\n}"
   }
 
   /** fork-join. The end will wait for all processing threads to be done 
@@ -189,14 +189,25 @@ abstract class WfBound extends WfSimple {
     
     // to avoid par(par(t)) we redefine to just link to what i already have
     override def | (e:WfAct) = {
-      val p = wf.scope(e)
-      glinks = List(WL(this,p)) ::: glinks.toList
-      gnodes = gnodes.toList ::: List(p) 
-      p --| aj
+        val p = wf.scope(e)
+        glinks = List(WL(this,p)) ::: glinks.toList
+        gnodes = gnodes.toList ::: List(p) 
+        p --| aj
       this
     }
     
-    override def toDsl = "par {\n" + gnodes.map(wf toDsl _).mkString("\n") + "\n}"
+//    // I don't understand this doesn't work
+//    override def | (e:WfAct*) = {
+//      e.foreach {f=>
+//        val p = wf.scope(f)
+//        glinks = List(WL(this,p)) ::: glinks.toList
+//        gnodes = gnodes.toList ::: List(p) 
+//        p --| aj
+//        }
+//      this
+//    }
+    
+    override def toDsl = "par {\n" + (wf indent gnodes.map(wf toDsl _).mkString("\n")) + "\n}"
   }
 
   /** scala code with no input nor return values */

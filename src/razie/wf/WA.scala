@@ -36,8 +36,9 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
   override def toString : String = this.getClass().getSimpleName + "()"
   
   // syntax niceties 
-  def + (e:WfAct) : WfAct = WfSeq (this,e)
-  def | (e:WfAct*) : WfAct = WfPar (this,e.toSeq:_*)
+  def + (e:WfAct) : WfAct = WfSeq (this, e)
+  def | (e:WfAct) : WfAct = WfPar (this, e)
+//  def | (e:Seq[WfAct]) : WfAct = WfPar ((this :: e.toList):_*)
   
   def print () : WfAct = { println (this mkString); this}
   

@@ -6,6 +6,7 @@
 package razie.wf
 
 import razie.base.{ActionContext => AC}
+import razie.AA
 import razie.actionables._
 import razie.g._
 
@@ -40,10 +41,12 @@ trait WfBaseLib[T] extends WfLib[T] {
   //------------------- expressions 
   /** the implicit local value */
   def $0 = new $Expr ("0")                 
+  def $x = new $Expr ("x")                 
+  def $y = new $Expr ("y")                 
   /** a value by name from context */
   def $ (name:String) = new $Expr (name)
   /** a constant value */
-  def $C(name:Any) = new CExpr (name)
+  def $C(const:Any) = new CExpr (const)
   
   implicit def xe  (sc:String) = new XExpr (sc)
   implicit def xei (sc:Int) = new CExpr (sc)
@@ -89,7 +92,7 @@ trait WfBaseLib[T] extends WfLib[T] {
 
 /** simple library */
 trait WCFBaseLib extends WCFExpr {
-  def wcfbaselib_lib: Parser[WfAct] = wlog | wnop | winc | wdec | razact
+  def wcfbaselib_lib: Parser[WfAct] = wlog | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore 
   
   def wlog: Parser[WfAct] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
   def wnop: Parser[WfAct] = "nop" ^^ (x => wf.nop)
@@ -102,8 +105,19 @@ trait WCFBaseLib extends WCFExpr {
      case "dec"~None => wf.inc(-1)
   }
   
+  def wass: Parser[WfAct] = "assign"~$expr~"="~expr ^^ {case "assign"~i~"="~e => wf.assign (i.name, e)}
+  
   def razact: Parser[WfAct] = "act:"~ac ^^ {case "act:"~a => wf.act (a)}
   def ac : Parser[TUP] = ident~":"~ident~opt(acoa) ^^ { case d~":"~f~sa => (d,f,sa.getOrElse("")) }
+  
+  def resReply : Parser[WfAct] = "ResReply" ^^ { case _ => new razie.wf.WfResReply() }
+  def resReplyIgnore : Parser[WfAct] = "ResReplyIgnore" ^^ { case _ => new razie.wf.WfResReplyIgnore() }
+  
+  def resReq : Parser[WfAct] = "ResReq"~"("~nocomma~","~nocomma~","~expr~")" ^^ { 
+     case "ResReq"~"("~g~","~w~","~e~")" => new WfResReq(razie.g.GRef.parse(g), w, AA(), e) 
+  }
+  def nocomma : Parser[String] = """[^,]+""".r // ^^ { e => e }
+  
 } 
 
 class WfeAction (ustr:String) extends Wfe0 ("act:"+ustr) {
@@ -121,7 +135,7 @@ case class WfeScript (lang:String, scr:String) extends WfExec {
   override def wname = "act - " + scr
 }
 
-class WfeAssign (name:String, e:XExpr) extends WfExec {
+class WfeAssign (name:String, e:XExpr) extends WfExec with HasDsl {
   override def apply (in:AC, prevValue:Any) = name match {
      case "0" => e(in, prevValue)
      case _ => {
@@ -131,6 +145,7 @@ class WfeAssign (name:String, e:XExpr) extends WfExec {
   }
   
   override def wname = "assign"
+  override def toDsl = "assign $"+name+"="+e.toDsl
 }
 
 class WfeLog (e:XExpr) extends Wfe1 ("log", e) { 

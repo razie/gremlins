@@ -25,9 +25,13 @@ import razie.base.{ActionContext => AC}
 object wf extends WfBaseLib[WfAct] {
    
   override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
+
+  final val INDENT = "                                                                                       "
+     
+  def indent (block: => String) : String = block.split('\n').map("  " + _) mkString "\n"
   
   def toDsl (x:AnyRef) = x match {
-     case a : HasDsl => a.toDsl 
+     case a : HasDsl => a.toDsl
      case _ => throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
   }
    
@@ -35,7 +39,8 @@ object wf extends WfBaseLib[WfAct] {
    
   // return the parsed workflow or throw exception with error
   def apply (s:String) : WfAct = {
-     val res = WCF.parseitman(s) // TODO use factory and hookup with WCF registration of libraries
+     val res = WCF.parseitman(s) 
+     // TODO use factory and hookup with WCF registration of libraries
     
      if (res.successful) res.get
      else throw new IllegalArgumentException (res.toString)
@@ -84,6 +89,7 @@ object wf extends WfBaseLib[WfAct] {
   
   /** bound this subgraph in a scope, if needed */
   def scope (a : WfAct) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+     // TODO optimize - if a is a scope with a single unconnected END, don't wrap again
      if (a.glinks.isEmpty) a
      else new WfScope (a)
      
@@ -91,6 +97,7 @@ object wf extends WfBaseLib[WfAct] {
   
   /** bound this subgraph in a scope, if needed */
   def scope (a : WfAct, l:WL*) = // optimization - if just one unconnected sub-graph, don't wrap in scope
+     // TODO optimize - if a is a scope with a single unconnected END, don't wrap again
      if (a.glinks.isEmpty) {
         l map (a +-> _.z)
         a

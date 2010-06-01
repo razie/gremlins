@@ -13,7 +13,7 @@ import razie.wf.lib._
 
 /** an expression */
 abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {
-  override def toString = expr
+  override def toString = toDsl
   override def toDsl = expr
 }
   
@@ -35,11 +35,13 @@ case class XExpr (e : String) extends Expr[Any] (e) {
 
 class XExprPLUS (a:XExpr, b:XExpr) extends XExpr ("+") {
   override def apply (in:AC, v:Any) : Any = a(in, v).toString + b(in,v).toString
+  override def toDsl = a.toDsl + " + " + b.toDsl
 }
 
 // TODO i'm looksing the type definition
 case class CExpr[T <: Any] (ee : T) extends XExpr (ee.toString) {
   override def apply (in:AC, v:Any) : Any = ee
+  override def toDsl = "\"" + expr + "\""
 }
 
 case class $Expr (name : String) extends XExpr ("$"+name) {
@@ -91,14 +93,21 @@ trait WCFExpr extends JavaTokenParsers {
 
   //--------------- expressions
    
-//  def const : Parser[Any] = ffp | fstr
-
-  // TODO proper expressions - this just makes everything a string
-  def expr : Parser[XExpr] = dolar0 | dolarexpr | numexpr | moreexpr
-  def dolar0 : Parser[XExpr] = """$0""" ^^ { x => new $Expr("0") }
-  def dolarexpr : Parser[XExpr] = """$"""~ident ^^ { case """\$"""~i => new $Expr(i) }
-  def numexpr : Parser[XExpr] = wholeNumber ^^ { i => new XExpr(i) }
-  def moreexpr : Parser[XExpr] = """[^()=<>|&]+""".r ^^ { e => new XExpr (e) }
+  def expr : Parser[XExpr] = ppexpr | pterm1
+  def ppexpr : Parser[XExpr] = pterm1~"+"~pterm1 ^^ { case a~s~b => a + b }
+  def pterm1 : Parser[XExpr] = numexpr | dolar0 | dolarexpr | cexpr //| moreexpr
+  
+  def dolar0 : Parser[$Expr] = """$0""" ^^ { case x => new $Expr("0") }
+  def dolarexpr : Parser[$Expr] = """$"""~ident ^^ { case """$"""~i => new $Expr(i) }
+  def $expr : Parser[$Expr] = dolar0 | dolarexpr 
+  def numexpr : Parser[XExpr] = wholeNumber ^^ { case i => new XExpr(i) }
+  def cexpr : Parser[XExpr] = "\""~"""[^"]*""".r~"\"" ^^ { case "\""~e~"\"" => new CExpr (e) }
+//  def moreexpr : Parser[XExpr] = """[^+"()=<>|&]+""".r ^^ { e => new XExpr (e) }
+  
+//  def pexpr: Parser[XExpr] = term~rep("+"~term | "-"~term) ^^ { case t~l => t+l.first }// TODO fix this
+//  def term: Parser[XExpr] = factor~rep("*"~factor | "/"~factor) ^^ { case f~l => t*l.first } //TODO fix this
+//  def factor: Parser[XExpr] = ffp | fstr | "("~expr~")" ^^ { case "("~e~")" => e }
+  
 //        val kk = new ScriptContextImpl(in)
 //        kk.set ("value", v.asInstanceOf[AnyRef])
 //        new ScriptScala(e).eval(kk).getOrThrow
@@ -114,7 +123,6 @@ trait WCFExpr extends JavaTokenParsers {
 //  def fstr: Parser[XExpr] = stringLiteral ^^ {s => new XExpr { override def eval (in:AC) = s } }
   
  
-  
   //------------ conditions
   
   def cond : Parser[BExpr] = boolexpr
@@ -132,6 +140,7 @@ trait WCFExpr extends JavaTokenParsers {
   def bcmp (a:BExpr, s:String, b:BExpr) = new BCMP1 (a,s,b)
   def cmp  (a:XExpr, s:String, b:XExpr) = new BCMP2 (a,s,b)
 
+  def parseExpr (s:String) = parseAll(expr, s)
 }
 
 /** version with combinator parsers */
@@ -181,8 +190,8 @@ trait WCFBase extends WCFExpr {
 } 
 
 /** simple extension example */
-object WCF extends WCFBase with WCFBaseLib {
-  override def wtypes : Parser[WfAct] = super.wtypes | wcfbaselib_lib 
+object WCF extends WCFBase with WCFBaseLib with CspWcf {
+  override def wtypes : Parser[WfAct] = super.wtypes | wcfbaselib_lib | csp_lib
 }
 
 object WFCMain extends Application {
@@ -238,13 +247,13 @@ par {
 
 //  p (s1) 
 //  p (s2) 
-  p (s3) 
+//  p (s3) 
 //  p (if1) 
 //  p (if2) 
 //  p (if3) 
 //  p (if4) 
 //  p (if5) 
-  
+
   def p (s:String) {
     println ("expr to parse:")
     println (s)
@@ -256,6 +265,35 @@ par {
        println("Workflow is: " + x.mkString)
        println ("==========================")
        println (">>>>>>>> RESULT is " + Engines().exec(x, razie.base.scripting.ScriptFactory.mkContext(), ""))
+    })
+    println ("=========================================================")
+  }
+  
+  val e1 = """1"""
+  val e2 = """"a""""
+  val e3 = """$0"""
+  val e4 = """$name"""
+  val e5 = """1+1"""
+  val e6 = """$0 + $0"""
+  val e7 = """$0 + "-P""""
+    
+  e(e1)
+  e(e2)
+  e(e3)
+  e(e4)
+  e(e5)
+  e(e6)
+  e(e7)
+  
+  def e (s:String) {
+    println ("expr to parse:")
+    println (s)
+    println ("==========================")
+    val res = WCF.parseExpr(s)
+    println("result parsed")
+    println (res)
+    res.map(x => {
+       println(x.getClass.getName + " = " + x.toString)
     })
     println ("=========================================================")
   }

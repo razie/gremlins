@@ -49,6 +49,7 @@ trait HasDsl /*extends GReferenceable*/ {
    * this must be the same format as the DSL one-liner or multiple lnes (for structured)
    */
   def toDsl : String 
+  def toIndentedDsl (indent:Int=>String, level:Int) = indent(level) + toDsl
 }
 
 /** 
@@ -58,6 +59,7 @@ trait HasDsl /*extends GReferenceable*/ {
  */
 trait notisser /*extends GReferenceable*/ extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("class notisser")
+  override def toIndentedDsl (indent:Int=>String, level:Int) = throw new UnsupportedOperationException ("class notisser")
 }
 
 /** need to implement serialization
