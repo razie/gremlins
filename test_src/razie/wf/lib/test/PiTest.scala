@@ -11,10 +11,6 @@ import razie.wf._
 class PiTest extends JUnit3Suite {
   import razie.wf.lib.PiCalc._
  
-  def P = log($0 + "-P")
-  def Q = log($0 + "-Q")
-  def T = log($0) // transparent
-
   def c = Channel("c") // channel c
   def x = $("x") // variable x
   

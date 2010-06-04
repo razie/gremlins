@@ -9,13 +9,9 @@ import razie.wf._
 
 /** CSP examples */
 class CspTest extends JUnit3Suite {
-  import razie.wf.lib.CSP._
-  import razie.wf.lib.PiCalc.v
+//  import razie.wf.lib.CSP._
+  import razie.wf.lib.PiCalc._
  
-  def P = log($0 + "-P")
-  def Q = log($0 + "-Q")
-  def T = log($0) // transparent
-
   def c = Channel("c") 
   
   def myp41 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )

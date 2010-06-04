@@ -22,7 +22,7 @@ object SomePiSamples extends Application {
   
   println (wf toDsl myp02)
   myp02.print 
-  myp02 run "1"
+  println ("RRRRRRRRRRRRRESULT is: " + (myp02 run "1"))
   
   Engines().stop
 }

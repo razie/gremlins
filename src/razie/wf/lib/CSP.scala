@@ -12,7 +12,7 @@ import razie.wf.res._
 import razie.g._
 
 /** communication channel / pipe: put/get values in sequence */
-class CommChannel (override val name:String) extends WQueue (name) {
+class CommChannel (val _name:String, val _size:Int) extends WQueue (_name, _size) {
   AllResources add this
 }
 
@@ -29,22 +29,26 @@ trait CSP extends WfLib[WfAct] with WfBaseLib[WfAct] {
   /** channel naming convention: it has to be unique in the same agent instance */
   object Channel {
      /** creates a channle with a unique ID recommended approach */
-     def apply () = WfChannel(GRef.uid)
+     def apply () = WfChannel(GRef.uid, true)
      /** creates a channle with a given name - NOTE that the name is shared across this AgentJVM */
-     def apply (name:String) = WfChannel(name)
-     def resolve (name:String) = AllResources.resolveOrCreate(GRef.id("WQueue", name)) { new CommChannel (name) }
+     def apply (name:String, size:Int = 0) = WfChannel(name, true, size)
+     def resolve (name:String, size:Int) = AllResources.resolveOrCreate(GRef.id("WQueue", name)) { new CommChannel (name, size) }
+     def destroy (name:String) = AllResources remove GRef.id("WQueue", name)
   }
-  
+
+  /** template WA to clear a channel */
   def clear (cname:String) = 
     WfChannel (cname) + 
     WfResReq (channelRef(cname), "clear", AA(), $0) +
     new WfResReplyIgnore()
   
+  /** template WA to put into a channel */
   def put (cname:String, ve:XExpr) = 
     WfChannel (cname) + 
     WfResReq (channelRef(cname), "put", AA(), ve) +
     new WfResReply ()
   
+  /** template WA to get from a channel a value and assign to given variable name */
   def get (cname:String, ve:$Expr) = 
     WfChannel (cname) + 
     WfResReq (channelRef(cname), "get", AA(), $(ve.name)) +
@@ -55,11 +59,12 @@ trait CSP extends WfLib[WfAct] with WfBaseLib[WfAct] {
 }
 
 /** special workflow activity to define/use a channel. It's used to inject channel syntax into workflow, like "c ! P" */
-case class WfChannel (cname:String, clear:Boolean = false) extends razie.wf.WfWrapper (
+case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends razie.wf.WfWrapper (
+      
   new Wfe1 ("channel", CExpr (cname)) {
     override def apply(in:AC, v:Any) = {
       import CSP.Channel
-      val x = Channel resolve cname
+      val x = Channel resolve (cname, size)
       if (clear) x map (_.asInstanceOf[CommChannel].clear)
       v
     }
@@ -128,6 +133,10 @@ object PiCalc extends CSP {
 
   /** stupid O activity */
   def O = log("O")
+  
+  def P = log($0 + "-P")
+  def Q = log($0 + "-Q")
+  def T = log($0) // transparent
 }
 
 /** simple library */
@@ -142,10 +151,6 @@ trait CspWcf extends WCFBaseLib {
 object PiSamples extends Application {
   import PiCalc._
  
-  def P = log($0 + "-P")
-  def Q = log($0 + "-Q")
-  def T = log($0) // transparent
-
   def c = Channel("c") // channel c
   def x = $("x") // variable x
   

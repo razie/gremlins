@@ -17,8 +17,10 @@ object Audit {
 
   def recStart  (a:Process, v:Any) = audit (razie.AA("Event", "START", "process", a.toString, "value", v.toString))
   def recDone   (a:Process, v:Any) = audit (razie.AA("Event", "DONE", "process", a.toString, "value", v.toString))
-  def recExec  (a:WfAct, in:Any, out:Any, paths:Int) =
-     audit (razie.AA("Event", "EXEC", "activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
+  def recExecBeg  (a:WfAct, in:Any) =
+     audit (razie.AA("Event", "EXEC.beg", "activity", a.toString, "in", in.toString))
+  def recExecEnd  (a:WfAct, in:Any, out:Any, paths:Int) =
+     audit (razie.AA("Event", "EXEC.end", "activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
   def recResNotFound  (a:WfAct, res:GRef) =
      audit (razie.AA("Event", "ERROR.resNotFound", "activity", a.toString, "res", res.toString))
 }
@@ -63,8 +65,9 @@ class ProcessThread (val parent:Process, val start:WfAct, val startLink:Option[W
 
     // execute action and return continuations: either myself or a bunch of spawns
     
+    Audit.recExecBeg  (currAct, currV)
     val (out, next) = currAct.traverse(nextLink, ctx, currV)
-    Audit.recExec  (currAct, currV, out, next.size)
+    Audit.recExecEnd  (currAct, currV, out, next.size)
     currV = out
 
     next map (_.linkState = LinkState.SELECTED)
