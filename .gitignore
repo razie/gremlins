@@ -1,4 +1,6 @@
 bin
 .scala_dependencies
 dist
+project/boot
+project/build/target
 

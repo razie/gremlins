@@ -106,6 +106,7 @@ object AllResources extends GResolver [WRes] {
 
   def add (res : WRes) : WRes = synchronized { resources += (res.key -> res); res }
   def remove (key:GRef) = synchronized { resources remove key }
+  def clear = resources.clear
   
   override def resolve (key : GRef) : Option[WRes] = synchronized {resources get key}
   def resolveOrCreate (key : GRef) (f: =>WRes) : Option[WRes] = synchronized {

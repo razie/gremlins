@@ -11,7 +11,7 @@ import razie.wf._
 class PiTest extends JUnit3Suite {
   import razie.wf.lib.PiCalc._
  
-  def c = Channel("c") // channel c
+  def c = Channel("c", 1) // channel c - buffer size 1, i.e. non-blocking...
   def x = $("x") // variable x
   
   def myp11 = v(c) + P  // correct (v c) P
@@ -33,6 +33,6 @@ class PiTest extends JUnit3Suite {
   def myp41 = v(c) (c.get($0) --> P | c.put($0) <-- Q)  // correct v(c) ( c(0) P | c<0> Q )
   def testmyp41 = expect (true) { (myp41.print run "1").asInstanceOf[List[_]] contains "1-Q-P" }
   
-  override def setUp () = { Engines.start }
-  override def tearDown () = { Engines().stop }
+  override def setUp () = { Engines.start; AllResources.clear }
+  override def tearDown () = { Engines().stop; AllResources.clear }
 }

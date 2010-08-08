@@ -91,8 +91,11 @@ trait WfBaseLib[T] extends WfLib[T] {
 }
 
 /** simple library */
-trait WCFBaseLib extends WCFExpr {
-  def wcfbaselib_lib: Parser[WfAct] = wlog | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore 
+trait WCFBaseLib extends WCFBase {
+//  override def activities () : Parser[WfAct] = wcfbaselib
+  def wcfbaselib : Parser[WfAct] = (
+        wlog | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore | assetcmd
+        )
   
   def wlog: Parser[WfAct] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
   def wnop: Parser[WfAct] = "nop" ^^ (x => wf.nop)
@@ -118,6 +121,11 @@ trait WCFBaseLib extends WCFExpr {
   }
   def nocomma : Parser[String] = """[^,]+""".r // ^^ { e => e }
   
+  def assetcmd : Parser[WfAct] = "snak"~"("~nocomma~","~nocomma~","~exprmap~")" ^^ { 
+     case "snak"~"("~a~","~g~","~em~")" => new WfAssetCmd(a, razie.g.GRef.parse(g), AA(), em) 
+  }
+  def exprmap : Parser[Map[String,XExpr]] = "("~>repsep (exprmember, ",")<~")" ^^ (Map() ++ _)
+  def exprmember : Parser[(String,XExpr)] = ident~"="~expr ^^ { case i~"="~e => (i,e) }
 } 
 
 class WfeAction (ustr:String) extends Wfe0 ("act:"+ustr) {
@@ -139,7 +147,7 @@ class WfeAssign (name:String, e:XExpr) extends WfExec with HasDsl {
   override def apply (in:AC, prevValue:Any) = name match {
      case "0" => e(in, prevValue)
      case _ => {
-        in.set (name, e(in, prevValue))
+        in.set (name, e(in, prevValue).asInstanceOf[AnyRef])
         prevValue
      }
   }
@@ -151,7 +159,7 @@ class WfeAssign (name:String, e:XExpr) extends WfExec with HasDsl {
 class WfeLog (e:XExpr) extends Wfe1 ("log", e) { 
   override def apply  (in:AC, prevValue:Any) : Any = {
     val v = e.apply(in, prevValue)
-    println (v.toString)
+    println (if (v == null) "NULL" else v.toString)
     v
   }
 }

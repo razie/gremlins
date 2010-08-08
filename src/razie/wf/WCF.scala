@@ -147,7 +147,10 @@ trait WCFExpr extends JavaTokenParsers {
 trait WCFBase extends WCFExpr {
   // by default it's a sequence
   
-  def wtypes : Parser[WfAct] = wctrl | label
+  // all libraries must implement this
+  def activities () : Parser[WfAct] = wcfbase
+  def wcfbase : Parser[WfAct] = wctrl | label
+  def wtypes : Parser[WfAct] = activities()
   
   def wset : Parser[Seq[WfAct]] = "{"~rep(one)~"}" ^^ { case "{"~l~"}" => l }
   
@@ -187,12 +190,32 @@ trait WCFBase extends WCFExpr {
 //  def fstr: Parser[XExpr] = stringLiteral ^^ {s => new XExpr { override def eval (in:AC) = s } }
   
   def parseitman (s:String) = parseAll(wfdefn, s)
+  def comp(x:Parser[WfAct],y:Parser[WfAct]) : Parser[WfAct] = x | y
+//  def comp(x:WCFBase#Parser[WfAct],y:WCFBase#Parser[WfAct]) : WCFBase#Parser[WfAct] = x | y
 } 
 
 /** simple extension example */
 object WCF extends WCFBase with WCFBaseLib with CspWcf {
-  override def wtypes : Parser[WfAct] = super.wtypes | wcfbaselib_lib | csp_lib
+  override def activities() : Parser[WfAct] = wcfbase | wcfbaselib | cspwcflib 
 }
+
+///** simple extension example */
+//object WCF extends WCFBase {
+//  type Gen = () => WCFBase#Parser[WfAct]
+//  type P = WCFBase#Parser[WfAct]
+//  
+//  val libs = new collection.mutable.ListBuffer[Gen]()
+// 
+//  this += (() => new WCFBaseLib().activities())
+//  this += (() => new CspWcf().activities())
+//  
+//  def += (lib:Gen) = { libs append lib; this }
+//  
+//  override def activities() : WCFBase#Parser[WfAct] = super.activities() | new WCFBaseLib().activities() | new CspWcf().activities()
+////  override def activities() : WCFBase#Parser[WfAct] = libs map (_()) foldLeft (super.activities()) (comp(_,_).asInstanceOf[WCFBase#Parser[WfAct]])
+////  override def activities() : WCFBase#Parser[WfAct] = super.activities() | libs map (_()) reduceLeft (_ | _)
+////  override def wtypes : Parser[WfAct] = super.wtypes | WCFBaseLib.activities | csp_lib
+//}
 
 object WFCMain extends Application {
   val s1 =
@@ -298,3 +321,6 @@ par {
     println ("=========================================================")
   }
 }
+
+
+

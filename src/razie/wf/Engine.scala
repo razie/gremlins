@@ -15,14 +15,15 @@ import scala.actors._
 object Audit {
   private def audit (aa:AA) = razie.Audit (aa)
 
-  def recStart  (a:Process, v:Any) = audit (razie.AA("Event", "START", "process", a.toString, "value", v.toString))
-  def recDone   (a:Process, v:Any) = audit (razie.AA("Event", "DONE", "process", a.toString, "value", v.toString))
+  def recCreate   (a:Process) = audit (razie.AA("Event", "CREATE", "process", a))
+  def recStart    (a:Process, v:Any) = audit (razie.AA("Event", "START", "process", a, "value", v.asInstanceOf[AnyRef]))
+  def recDone     (a:Process, v:Any) = audit (razie.AA("Event", "DONE", "process", a, "value", v.asInstanceOf[AnyRef]))
   def recExecBeg  (a:WfAct, in:Any) =
-     audit (razie.AA("Event", "EXEC.beg", "activity", a.toString, "in", in.toString))
+     audit (razie.AA("Event", "EXEC.beg", "activity", a, "in", in.asInstanceOf[AnyRef]))
   def recExecEnd  (a:WfAct, in:Any, out:Any, paths:Int) =
-     audit (razie.AA("Event", "EXEC.end", "activity", a.toString, "in", in.toString, "out",out.toString, "paths", paths.toString))
+     audit (razie.AA("Event", "EXEC.end", "activity", a, "in", in.asInstanceOf[AnyRef], "out",out.asInstanceOf[AnyRef], "paths", paths))
   def recResNotFound  (a:WfAct, res:GRef) =
-     audit (razie.AA("Event", "ERROR.resNotFound", "activity", a.toString, "res", res.toString))
+     audit (razie.AA("Event", "ERROR.resNotFound", "activity", a, "res", res))
 }
 
 trait WfControl {
@@ -100,14 +101,14 @@ class ProcessThread (val parent:Process, val start:WfAct, val startLink:Option[W
  * 
  * I don't think the history should be kept, unless we're running in some sort of "debug" or "audit" mode.
  */
-class Process (val start:WfAct, val ctx:AC, val startV:Any) { 
+class Process (val start:WfAct, val ctx:AC, startV:Any) { 
+  val id =  GRef.id("WfProcess", GRef.uid)
   var lastV = startV
     
   // the threads in progress these are all in parallel
   var currThreads : Seq[ProcessThread] = new ProcessThread (this, start, None, ctx, startV) :: Nil
   private[this]var countThreads = 0 // yeah, 0 is correct
   var oldThreads : Seq[ProcessThread] = Nil // don't know why i keep these
-
 
   def countThread (i:Int) = synchronized { this.countThreads += i }
   
@@ -236,12 +237,24 @@ class Engine {
   case class Done (p:Process)
   case class Exit 
 
-  def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
-    // wrap into begin/end
+  def create (start:WfAct, ctx:AC, startV : Any) : GRef = {
     import wf._
     val p = new Process (wf.scope(start), ctx, startV)       
     processes += p
 
+    Audit.recCreate (p)
+    p.id
+  }
+    
+  def start (id:GRef, startV:Any) : GRef = {
+    val t = istart (id, startV, true)
+    t._2 ! Start(t._1)
+    t._1.id
+  }
+  
+  private[this] def istart (id:GRef, startV:Any, async:Boolean) : (Process, Actor) = {
+    val p = processes.find(_.id == id) getOrElse (throw new IllegalArgumentException ("Process not found id: "+id))
+    p.lastV = startV
     Audit.recStart (p, startV)
     
     val me : Actor = new Actor {
@@ -250,24 +263,30 @@ class Engine {
           preProcess(p)
           processor ! Tick (p, this)
           receive { 
-            case Done(p) => 
+            case Done(p) => {
+               Audit.recDone (p, p.lastV)
+               processes -= p // maybe keep it around?
+            }
           }
           reply()
        }
     }
     }
 
-    
     me.start
-    me !? Start(p) // just wait, discard reply
+    
+    (p, me)
+  }
+  
+  def exec (start:WfAct, ctx:AC, startV:Any) : Any = {
+    // wrap into begin/end
+    import wf._
+    
+    val t = istart(create(start, ctx, startV), startV, false)
+    
+    t._2 !? Start(t._1) // just wait, discard reply
 
-    val ret  = p.lastV
-    
-    Audit.recDone (p, ret)
-    
-    processes -= p
-    
-    ret
+    t._1.lastV
   }
 
   /** TODO complete this sync execution - good for debugging or something...right now it's missing async resources */

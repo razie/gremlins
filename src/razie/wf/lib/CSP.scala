@@ -17,7 +17,7 @@ class CommChannel (val _name:String, val _size:Int) extends WQueue (_name, _size
 }
 
 /** 
- * CSP - channel based communication between processes - implies synchronization
+ * CSP - channel based communication between processes - implies multi-way synchronization on channels
  */
 object CSP extends CSP
 
@@ -65,9 +65,10 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
     override def apply(in:AC, v:Any) = {
       import CSP.Channel
       val x = Channel resolve (cname, size)
-      if (clear) x map (_.asInstanceOf[CommChannel].clear)
+      if (clear) x.get.asInstanceOf[CommChannel].clear
       v
     }
+  override def toDsl = "channel ("+clear+","+size+","+expr.toDsl+")"
   }) {
   import CSP.$0
  
@@ -84,17 +85,17 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
   /** out from process into channel */
   def put (ve:XExpr) = { CSP.put (cname, ve) }
   def put (ve:String) = { CSP.put (cname, new CExpr(ve)) }
+  def -<- (x:$Expr) = this put x  // allow v(x) + P
   
   /** in process out from channel */
   def get (ve:$Expr) = { CSP.get (cname, ve) }
+  def ->- (x:$Expr) = this get x  // allow v(x) + P
+  def apply (x:$Expr) = this get x  // allow c(x) + P
+  def apply () = this get $0  // allow c(x) + P
   
   def * (x:WfAct) = this + x      // allow v("c") * P === v(c).P
   def apply (x:WfAct) = this + x  // allow v(x) (P Q)
   def apply (x:WfChannel => WfAct) = this + x(this)  // allow v(x) (P Q)
-  def apply (x:$Expr) = this + get (x)  // allow c(x) + P
-  def apply () = this + get ($0)  // allow c(x) + P
-  def ->- (x:$Expr) = this + get (x)  // allow v(x) + P
-  def -<- (x:$Expr) = this + put (x)  // allow v(x) + P
 }
 
 /**
@@ -129,7 +130,7 @@ object PiCalc extends CSP {
   /** create or clear a channel */
   def v (name:String) = WfChannel(name, true)
   /** create or clear a channel */
-  def v (c:WfChannel) = WfChannel (c.cname, true)
+  def v (c:WfChannel) = WfChannel (c.cname, true, c.size)
 
   /** stupid O activity */
   def O = log("O")
@@ -140,10 +141,12 @@ object PiCalc extends CSP {
 }
 
 /** simple library */
-trait CspWcf extends WCFBaseLib {
-  def csp_lib: Parser[WfAct] = channel 
-  
-  def channel : Parser[WfAct] = "channel"~"("~"\""~ident~"\""~")" ^^ { case "channel"~"("~"\""~i~"\""~")" => new WfChannel(i) }
+trait CspWcf extends WCFBase {
+//  override def activities () : Parser[WfAct] = cspwcflib
+  def cspwcflib : Parser[WfAct] = channel 
+
+  def boo : Parser[Boolean] = "true" ^^ {s:String => true} | "false" ^^ {s:String => false}
+  def channel : Parser[WfAct] = "channel"~"("~boo~","~wholeNumber~","~"\""~ident~"\""~")" ^^ { case "channel"~"("~c~","~s~","~"\""~i~"\""~")" => new WfChannel(i, c, Integer.parseInt(s)) }
 } 
 
 //=================================================== samples

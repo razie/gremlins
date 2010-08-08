@@ -6,12 +6,7 @@ import com.razie.pub.base.data.RazElement
 object StaticAct {
   /** make a list of actionables from a list of actionables :) */
   def maker (l:List[Actionable]) : THasActionables = {
-    val actions = new DefaultAct(null)
-    
-    for (val a <- l.toList ) 
-      actions add a
-    
-    actions
+    new DefaultAct(Map() ++ l.map(x=>(x.name, x)))
   }  
   
   /** make a list of actionables from an <actionables> tag */
@@ -31,13 +26,5 @@ object StaticAct {
 }
 
 /** simple default collcetion of actionables */
-class DefaultAct (var actions:java.util.Map[String,Actionable]) extends THasActionables {
-  if (actions == null)
-    actions = new java.util.HashMap[String,Actionable]()
-  
-  override def getActionables() = {
-    actions 
-  }
-  
-  def add (x:Actionable) = actions.put(x.name, x)
+class DefaultAct (override val actionables:Map[String,Actionable]) extends THasActionables {
 }

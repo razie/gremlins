@@ -6,7 +6,7 @@ import junit.framework.TestSuite;
 import org.scalatest.junit._
 import org.scalatest.SuperSuite
 
-class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
+class SuiteWf () extends junit.framework.TestSuite(classOf[XNadaWf]) {
   
   // this is where you list the tests...
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfLibTest]))
@@ -17,6 +17,8 @@ class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
   
   addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.CspTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.PiTest]))
+  
+  addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.GTest]))
    
    def test1() = 
      // don't touch this line
@@ -24,6 +26,6 @@ class SuiteWf () extends junit.framework.TestSuite(classOf[XNada]) {
      
 }
 
-class XXNada extends junit.framework.TestCase {
+class XNadaWf extends junit.framework.TestCase {
  def testNada : Unit =  {}
 }
