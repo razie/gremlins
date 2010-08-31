@@ -13,9 +13,9 @@ import razie.wf._
  * 
  * http://www.oasis-open.org/committees/download.php/23964/wsbpel-v2.0-primer.htm
  */
-object yawl extends WfLib[WfAct] {
+object yawl extends WfLib[WfActivity] {
    
-  override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
+  override def wrap (e:WfExec) : WfActivity = razie.wf.WfWrapper (e)
 
   //-------------------------------- basic activities
 

@@ -2,5 +2,6 @@
 Short TODO list
 ======================
 
-todo multithreading
+todo distribution
+todo persistency
 

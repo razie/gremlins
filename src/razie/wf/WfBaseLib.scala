@@ -17,7 +17,7 @@ class Wfe0 (override val wname:String) extends WfExec with HasDsl {
 }
 
 /** do(expr) - uses an expression - either constant or a scripted expression */
-abstract class Wfe1 (override val wname:String, val expr:XExpr) extends WfExec with HasDsl {
+abstract class Wfe1 (override val wname:String, val expr:AExpr) extends WfExec with HasDsl {
   override def toDsl = wname+" ("+expr.toDsl+")"
 }
 
@@ -31,7 +31,7 @@ trait WfLib[T] extends WfLibrary[T] {
   me =>
   def todo = me wrap new Wfe0 ("todo")
   
-  implicit val linkFactory = (x,y) => WL(x,y)
+  implicit val linkFactory = (x,y) => WfLink(x,y)
 }
 
 /** basic library of executables */
@@ -48,31 +48,31 @@ trait WfBaseLib[T] extends WfLib[T] {
   /** a constant value */
   def $C(const:Any) = new CExpr (const)
   
-  implicit def xe  (sc:String) = new XExpr (sc)
+  implicit def xe  (sc:String) = new AExpr (sc)
   implicit def xei (sc:Int) = new CExpr (sc)
   
   // nop if you need an empty activity - maybe required by the syntax
   def nop  = me wrap new Wfe0 ("nop")
   
-  def sleep (i:XExpr) = me wrap new WfeSleep (i)
-  def sleep (i:String) = me wrap new WfeSleep (WCFExpr parseXExpr i)
-  def sleep (i:Int=1) = me wrap new WfeSleep (WCFExpr parseXExpr i.toString)
+  def sleep (i:AExpr) = me wrap new WfeSleep (i)
+  def sleep (i:String) = me wrap new WfeSleep (WCFExpr parseAExpr i)
+  def sleep (i:Int=1) = me wrap new WfeSleep (WCFExpr parseAExpr i.toString)
   
-  def inc (i:XExpr) = me wrap new WfeInc (i)
-  def inc (i:String) = me wrap new WfeInc (WCFExpr parseXExpr i)
-  def inc (i:Int=1) = me wrap new WfeInc (WCFExpr parseXExpr i.toString)
+  def inc (i:AExpr) = me wrap new WfeInc (i)
+  def inc (i:String) = me wrap new WfeInc (WCFExpr parseAExpr i)
+  def inc (i:Int=1) = me wrap new WfeInc (WCFExpr parseAExpr i.toString)
   def inc : T = inc(1)
-  def dec (i:XExpr) = me wrap new WfeDec (i)
-  def dec (i:Int=1) = me wrap new WfeDec (WCFExpr parseXExpr i.toString)
+  def dec (i:AExpr) = me wrap new WfeDec (i)
+  def dec (i:Int=1) = me wrap new WfeDec (WCFExpr parseAExpr i.toString)
   def dec : T = dec(1)
-  def set (i:Any) = me wrap new WfeSet (WCFExpr parseXExpr i.toString)
+  def set (i:Any) = me wrap new WfeSet (WCFExpr parseAExpr i.toString)
   
   // logging
-  def log (m: XExpr) = me wrap new WfeLog (m)
+  def log (m: AExpr) = me wrap new WfeLog (m)
   
   // assign
 //  def assign (name:String) (value: =>Any) = me wrap new WfeAssign (name)((x)=>value)
-  def assign (name:String, e:XExpr) = me wrap new WfeAssign (name, e)
+  def assign (name:String, e:AExpr) = me wrap new WfeAssign (name, e)
 
   // TODO scripted activities can migrate easily anywhere, eh?
   implicit def s      (sc:String) = script ("?", "scala", sc)
@@ -92,44 +92,44 @@ trait WfBaseLib[T] extends WfLib[T] {
 
 /** simple library */
 trait WCFBaseLib extends WCFBase {
-//  override def activities () : Parser[WfAct] = wcfbaselib
-  def wcfbaselib : Parser[WfAct] = (
+//  override def activities () : Parser[WfActivity] = wcfbaselib
+  def wcfbaselib : Parser[WfActivity] = (
         wlog | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore | assetcmd
         )
   
-  def wlog: Parser[WfAct] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
-  def wnop: Parser[WfAct] = "nop" ^^ (x => wf.nop)
-  def winc: Parser[WfAct] = "inc"~opt("("~expr~")") ^^ {
+  def wlog: Parser[WfActivity] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
+  def wnop: Parser[WfActivity] = "nop" ^^ (x => wf.nop)
+  def winc: Parser[WfActivity] = "inc"~opt("("~expr~")") ^^ {
      case "inc"~Some("("~e~")") => wf.inc(e)
      case "inc"~None => wf.inc()
   }
-  def wdec: Parser[WfAct] = "dec"~opt("("~expr~")") ^^ {
+  def wdec: Parser[WfActivity] = "dec"~opt("("~expr~")") ^^ {
      case "dec"~Some("("~e~")") => wf.dec(e)
      case "dec"~None => wf.inc(-1)
   }
   
-  def wass: Parser[WfAct] = "assign"~$expr~"="~expr ^^ {case "assign"~i~"="~e => wf.assign (i.name, e)}
+  def wass: Parser[WfActivity] = "assign"~$expr~"="~expr ^^ {case "assign"~i~"="~e => wf.assign (i.name, e)}
   
-  def razact: Parser[WfAct] = "act:"~ac ^^ {case "act:"~a => wf.act (a)}
+  def razact: Parser[WfActivity] = "act:"~ac ^^ {case "act:"~a => wf.act (a)}
   def ac : Parser[TUP] = ident~":"~ident~opt(acoa) ^^ { case d~":"~f~sa => (d,f,sa.getOrElse("")) }
   
-  def resReply : Parser[WfAct] = "ResReply" ^^ { case _ => new razie.wf.WfResReply() }
-  def resReplyIgnore : Parser[WfAct] = "ResReplyIgnore" ^^ { case _ => new razie.wf.WfResReplyIgnore() }
+  def resReply : Parser[WfActivity] = "ResReply" ^^ { case _ => new razie.wf.WfResReply() }
+  def resReplyIgnore : Parser[WfActivity] = "ResReplyIgnore" ^^ { case _ => new razie.wf.WfResReplyIgnore() }
   
-  def resReq : Parser[WfAct] = "ResReq"~"("~nocomma~","~nocomma~","~expr~")" ^^ { 
+  def resReq : Parser[WfActivity] = "ResReq"~"("~nocomma~","~nocomma~","~expr~")" ^^ { 
      case "ResReq"~"("~g~","~w~","~e~")" => new WfResReq(razie.g.GRef.parse(g), w, AA(), e) 
   }
   def nocomma : Parser[String] = """[^,]+""".r // ^^ { e => e }
   
-  def assetcmd : Parser[WfAct] = "snak"~"("~nocomma~","~nocomma~","~exprmap~")" ^^ { 
+  def assetcmd : Parser[WfActivity] = "snak"~"("~nocomma~","~nocomma~","~exprmap~")" ^^ { 
      case "snak"~"("~a~","~g~","~em~")" => new WfAssetCmd(a, razie.g.GRef.parse(g), AA(), em) 
   }
-  def exprmap : Parser[Map[String,XExpr]] = "("~>repsep (exprmember, ",")<~")" ^^ (Map() ++ _)
-  def exprmember : Parser[(String,XExpr)] = ident~"="~expr ^^ { case i~"="~e => (i,e) }
+  def exprmap : Parser[Map[String,AExpr]] = "("~>repsep (exprmember, ",")<~")" ^^ (Map() ++ _)
+  def exprmember : Parser[(String,AExpr)] = ident~"="~expr ^^ { case i~"="~e => (i,e) }
 } 
 
 class WfeAction (ustr:String) extends Wfe0 ("act:"+ustr) {
-  val ac = ActFactory.make("?", ustr)
+  val ac = Actionables.make("?", ustr)
   override def apply (in:AC, prevValue:Any) = ac.execute() 
 }
 
@@ -143,7 +143,7 @@ case class WfeScript (lang:String, scr:String) extends WfExec {
   override def wname = "act - " + scr
 }
 
-class WfeAssign (name:String, e:XExpr) extends WfExec with HasDsl {
+class WfeAssign (name:String, e:AExpr) extends WfExec with HasDsl {
   override def apply (in:AC, prevValue:Any) = name match {
      case "0" => e(in, prevValue)
      case _ => {
@@ -156,7 +156,7 @@ class WfeAssign (name:String, e:XExpr) extends WfExec with HasDsl {
   override def toDsl = "assign $"+name+"="+e.toDsl
 }
 
-class WfeLog (e:XExpr) extends Wfe1 ("log", e) { 
+class WfeLog (e:AExpr) extends Wfe1 ("log", e) { 
   override def apply  (in:AC, prevValue:Any) : Any = {
     val v = e.apply(in, prevValue)
     println (if (v == null) "NULL" else v.toString)
@@ -164,23 +164,23 @@ class WfeLog (e:XExpr) extends Wfe1 ("log", e) {
   }
 }
 
-class WfeInc (e:XExpr) extends Wfe1 ("inc", e) { 
+class WfeInc (e:AExpr) extends Wfe1 ("inc", e) { 
   override def apply  (in:AC, prevValue:Any) : Any = 
     (if (prevValue.isInstanceOf[Int]) prevValue.asInstanceOf[Int] else prevValue.toString.toInt) + 
     e.apply(in, prevValue).toString.toInt
 }
   
-class WfeDec (e:XExpr) extends Wfe1 ("dec", e) { 
+class WfeDec (e:AExpr) extends Wfe1 ("dec", e) { 
   override def apply  (in:AC, prevValue:Any) : Any = 
     prevValue.asInstanceOf[Int] - e.apply(in, prevValue).toString.toInt
 }
   
-class WfeSet (newV:XExpr) extends Wfe1 ("set", newV) { 
+class WfeSet (newV:AExpr) extends Wfe1 ("set", newV) { 
   override def apply  (in:AC, prevValue:Any) : Any = 
     newV.apply(in, prevValue)
 }
   
-class WfeSleep (e:XExpr) extends Wfe1 ("sleep", e) { 
+class WfeSleep (e:AExpr) extends Wfe1 ("sleep", e) { 
   override def apply  (in:AC, prevValue:Any) : Any = Thread sleep e.apply(in, prevValue).toString.toInt
 }
   

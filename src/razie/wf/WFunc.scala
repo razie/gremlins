@@ -13,7 +13,7 @@ import razie.actionables._
  * 
  * They are also invoked in a context - a set of objects in a certain role.
  * 
- * There are two major branches: WFunc and WfAct. An action is a workflow specific thing and is aware of next actions, state of execution whatnot. It also does something so it's derived from WFunc. 
+ * There are two major branches: WFunc and WfActivity. An action is a workflow specific thing and is aware of next actions, state of execution whatnot. It also does something so it's derived from WFunc. 
  * 
  * WFunc by itself only does something and is not stateful. Most activities are like that.
  */
@@ -47,6 +47,8 @@ trait HasDsl /*extends GReferenceable*/ {
   /* serialize the DEFINITION 
    * 
    * this must be the same format as the DSL one-liner or multiple lnes (for structured)
+   * 
+   * TODO could be better
    */
   def toDsl : String 
   def toIndentedDsl (indent:Int=>String, level:Int) = indent(level) + toDsl
@@ -72,14 +74,14 @@ trait sertodo /*extends GReferenceable*/ extends HasDsl {
 
 //--------------------------- library stuff
 
-/** bridge the WFunc to the WfAct */
+/** bridge the WFunc to the WfActivity */
 trait WfExec extends WFunc[Any] {
   def wname : String = "?"
 }
 
-/** libraries of executables should have this trait. You can have lib[WfAct] or lib[WfExec] or whatever */
+/** libraries of executables should have this trait. You can have lib[WfActivity] or lib[WfExec] or whatever */
 trait WfLibrary[T] { 
-  /** wraps an WfExec into a WfAct...customize this per implementation */
+  /** wraps an WfExec into a WfActivity...customize this per implementation */
   def wrap (e:WfExec) : T
 }
 

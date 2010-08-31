@@ -16,9 +16,9 @@ import razie.g._
  * 
  * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
-abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g.WRGraph[WfAct, WL] {
-  override var gnodes : Seq[WfAct] = Nil // next activities - note that this is not containment, is it?
-  override var glinks : Seq[WL] = Nil // links 
+abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaState with razie.g.WRGraph[WfActivity, WfLink] {
+  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
+  override var glinks : Seq[WfLink] = Nil // links 
    
   /** the engine is traversing the graph...similar to executing it.
    * 
@@ -30,43 +30,43 @@ abstract class WfAct extends razie.g.GNode[WfAct, WL] with WfaState with razie.g
    * 
    * NOTE that the links returned must be one of the static links - you can't make up new ones...otherwise I cannot recover state from storage?
    */
-  def traverse (in:AC, v:Any) : (Any,Seq[WL])
-  def traverse (from: Option[WL], in:AC, v:Any) : (Any,Seq[WL]) = traverse (in, v)
+  def traverse (in:AC, v:Any) : (Any,Seq[WfLink])
+  def traverse (from: Option[WfLink], in:AC, v:Any) : (Any,Seq[WfLink]) = traverse (in, v)
     
   override def toString : String = this.getClass().getSimpleName + "()"
   
   // syntax niceties 
-  def + (e:WfAct) : WfAct = WfSeq (this, e)
-  def | (e:WfAct) : WfAct = WfPar (this, e)
-//  def | (e:Seq[WfAct]) : WfAct = WfPar ((this :: e.toList):_*)
+  def + (e:WfActivity) : WfActivity = WfSeq (this, e)
+  def | (e:WfActivity) : WfActivity = WfPar (this, e)
+//  def | (e:Seq[WfActivity]) : WfActivity = WfPar ((this :: e.toList):_*)
   
-  def print () : WfAct = { println (this mkString); this}
+  def print () : WfActivity = { println (this mkString); this}
   
   // simplified execution
   def run (initialValue : Any) : Any = 
     Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
 
-  implicit val linkFactory : LFactory = (x,y) => WL(x,y) // for the nice inherited --> operators 
+  implicit val linkFactory : LFactory = (x,y) => WfLink(x,y) // for the nice inherited --> operators 
 
   // -------------- specific to WF? could move down?
   
   /** bound: point all leafs to z, an end node, while avoiding z --> z */
-  def --| (z:WfAct)(implicit linkFactory: LFactory)  = {
-    ( razie.g.Graphs.filterNodes[WfAct,WL](this) {a => a.glinks.isEmpty && a != z} ) foreach (i => i +-> z)
+  def --| (z:WfActivity)(implicit linkFactory: LFactory)  = {
+    ( razie.g.Graphs.filterNodes[WfActivity,WfLink](this) {a => a.glinks.isEmpty && a != z} ) foreach (i => i +-> z)
     this
   }
   
-  def <-- (z:WfAct) : WfAct =  z --> this
-  def <-+ (z:WfAct) : WfAct =  z +-> this
+  def <-- (z:WfActivity) : WfActivity =  z --> this
+  def <-+ (z:WfActivity) : WfActivity =  z +-> this
 }
  
 /** may want to store some color here...or have the link do something */
-case class WL (a:WfAct, z:WfAct) extends razie.g.GLink[WfAct] with WflState 
+case class WfLink (a:WfActivity, z:WfActivity) extends razie.g.GLink[WfActivity] with WflState 
 
 /** special link with a selector value. it assists the parent in deciding where to go next */
-case class WLM (aa:WfAct, zz:WfAct, val selector:WFunc[Boolean]) extends WL (aa,zz)
+case class WfLinkM (aa:WfActivity, zz:WfActivity, val selector:WFunc[Boolean]) extends WfLink (aa,zz)
  
 /** special link with a selector value. it assists the parent in deciding where to go next */
-//case class WLV (aaa:WfAct, zzz:WfAct, val aselector:Any) extends WLM (aaa,zzz, WFCMP(aselector))
-case class WLV (aaa:WfAct, zzz:WfAct, val selector:Any) extends WL (aaa,zzz)
+//case class WfLinkV (aaa:WfActivity, zzz:WfActivity, val aselector:Any) extends WfLinkM (aaa,zzz, WFCMP(aselector))
+case class WfLinkV (aaa:WfActivity, zzz:WfActivity, val selector:Any) extends WfLink (aaa,zzz)
 

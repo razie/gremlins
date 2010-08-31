@@ -11,11 +11,11 @@ import razie.wf._
 
 ////----------- pattern based
 //  
-//abstract case class WAM () extends WfAct {
-//  def mlinks : Seq[WLM] // links 
+//abstract case class WAM () extends WfActivity {
+//  def mlinks : Seq[WfLinkM] // links 
 //   
 //  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-//  def traverse (in:AC, v:Any) : (Any,Seq[WL])
+//  def traverse (in:AC, v:Any) : (Any,Seq[WfLink])
 //}
 //
 //trait Matcher {
@@ -23,15 +23,15 @@ import razie.wf._
 //}
 //
 ///** may want to store some color here...or have the link do something */
-//case class WLM (override val a:WA, override val z:WA, val m:Matcher) extends WL(a,z) { }
+//case class WfLinkM (override val a:WA, override val z:WA, val m:Matcher) extends WfLink(a,z) { }
 //  
 //  /** simple activities just do their thing */
-//  case class WfmSimple extends WfAct { 
+//  case class WfmSimple extends WfActivity { 
 //    override def activities : Seq[WA] = Nil
-//    override def links : Seq[WL] = Nil
+//    override def links : Seq[WfLink] = Nil
 //   
 //    /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-//    override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = this match {
+//    override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = this match {
 //       case a : WfExec => (a.exec(in, v), links)
 //       case _ => (v,links)
 //    }
@@ -44,19 +44,19 @@ import razie.wf._
 //----------------------- match/guard
   
 /** match AT MOST one branch */
-case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfAct {
+case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
   gnodes = Nil
-  glinks = e.l.map (WL(this,_))
+  glinks = e.l.map (WfLink(this,_))
    
   /** return either branch, depending on cond */
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val e = expr()
-    var ret:Seq[WL] = Nil
+    var ret:Seq[WfLink] = Nil
     
-//    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
+//    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WfLink(this,_))))
     for (i <- Range (0, glinks.size-1)) 
       if (ret.isEmpty) {
-        val r = glinks(i).z.asInstanceOf[WfCase1].apply(e).map (WL(this,_))
+        val r = glinks(i).z.asInstanceOf[WfCase1].apply(e).map (WfLink(this,_))
         if (! r.isEmpty)
           ret = r.toList
       }
@@ -67,15 +67,15 @@ case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfAct {
 /** like wmatch but wguard matches ALL possibilities */
 case class WfGuard1 (_expr : () => Any, _e:WfCases1) extends WfMatch1 (_expr, _e) {
   /** return either branch, depending on cond */
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val e = expr()
-    (v, glinks.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WL(this,_))))
+    (v, glinks.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WfLink(this,_))))
   }
 }
 
 /** a case of a wmatch or wguard */
-class WfCase1(pattern : => PartialFunction[Any, WfAct]) extends WfSimple { 
-   def apply(value: Any) : Option[WfAct] = 
+class WfCase1(pattern : => PartialFunction[Any, WfActivity]) extends WfSimple { 
+   def apply(value: Any) : Option[WfActivity] = 
      if (value == null || !pattern.isDefinedAt(value)) 
        None
      else 
@@ -86,8 +86,8 @@ class WfCase1(pattern : => PartialFunction[Any, WfAct]) extends WfSimple {
 }
 
 /** match anything */
-class WfCaseAny1 (a:WfAct) extends WfCase1(null) { 
-   override def apply(value: Any) : Option[WfAct] = Some(a)
+class WfCaseAny1 (a:WfActivity) extends WfCase1(null) { 
+   override def apply(value: Any) : Option[WfActivity] = Some(a)
 }
 
 protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
@@ -96,9 +96,9 @@ protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
 
 //-------------------------------matchers 2
 
-class WfCase2[T <: Any] (val t : T) (a:WfAct) extends WfSimple { 
+class WfCase2[T <: Any] (val t : T) (a:WfActivity) extends WfSimple { 
    gnodes = a :: Nil
-   glinks = WL(this,a) :: Nil
+   glinks = WfLink(this,a) :: Nil
    
    def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && value == t
   
@@ -106,15 +106,15 @@ class WfCase2[T <: Any] (val t : T) (a:WfAct) extends WfSimple {
    def + (b:List[WfCase2[_ <: Any]]) : WfCases2 = new WfCases2(List(this) ::: b)
 }
 
-class WfCase2a[T <: Any] (a:WfAct) extends WfCase2 (null) (a) { 
+class WfCase2a[T <: Any] (a:WfActivity) extends WfCase2 (null) (a) { 
    override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T]
 }
 
-class WfCase2p[T <: Any] (cond : T => Boolean) (a : WfAct) extends WfCase2 (null) (a) { 
+class WfCase2p[T <: Any] (cond : T => Boolean) (a : WfActivity) extends WfCase2 (null) (a) { 
    override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && cond(value.asInstanceOf[T])
 }
 
-class WfCase2ap[T <: Any] (cond : T => Boolean) (a : WfAct) extends WfCase2a (a) { 
+class WfCase2ap[T <: Any] (cond : T => Boolean) (a : WfActivity) extends WfCase2a (a) { 
    override def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && cond(value.asInstanceOf[T])
 }
 
@@ -123,15 +123,15 @@ class WfCases2 (val l : List[WfCase2[_ <: Any]]) extends WfSimple {
 }
 
 /** match anything */
-class WfCaseAny2 (a:WfAct) extends WfCase2(null)(a) { 
+class WfCaseAny2 (a:WfActivity) extends WfCase2(null)(a) { 
    override def apply(value: Any) : Boolean = true
 }
 
-abstract class WfMatchBase extends WfAct {
+abstract class WfMatchBase extends WfActivity {
   gnodes = Nil
-  glinks = branches.map (WL(this,_))
+  glinks = branches.map (WfLink(this,_))
   
-  val expr : XExpr
+  val expr : AExpr
   val branches : Seq[WfCase2[_]]
   
   lazy val any = glinks.filter(_.z.isInstanceOf[WfCaseAny2])
@@ -139,10 +139,10 @@ abstract class WfMatchBase extends WfAct {
 }
 
 case class WfMatch2 (
-      val expr : XExpr,
+      val expr : AExpr,
       val branches : Seq[WfCase2[_]]
       ) extends WfMatchBase {
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val e = expr.apply (in, v)
     val res = others.filter (g => g.z.asInstanceOf[WfCase2[_]].apply(e))
     

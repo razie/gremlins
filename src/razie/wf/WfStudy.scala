@@ -79,7 +79,7 @@ object Wf5Main extends Application {
   this e match1
   this e match2
   
-  def e (w : WfAct) = {
+  def e (w : WfActivity) = {
     acc = ""
     println ("")
     println ("Workflow is: " + w.mkString)

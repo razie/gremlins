@@ -12,11 +12,11 @@ import razie.g._
 /** a resource. Resources have two things: wait/sync and acquire 
  * 
  * <p>
- * A WfAct can advertise that it needs a certain resource. The engine can then do some planning. 
+ * A WfActivity can advertise that it needs a certain resource. The engine can then do some planning. 
  * The engine will acquire/release the resource FOR the action...the action doesn't have to
  * 
  * <ul>
- * <li> the WfAct advertises that it needs the resource
+ * <li> the WfActivity advertises that it needs the resource
  * <li> the engine will acquire it. the acquire is not blocking...the resource will notify the engine when it was acquired
  * <li> the action uses the resource: sends requests. These are non-blocking
  * <li> IF the resource says anything except RRWAIT, then action gets result and continues
@@ -63,8 +63,8 @@ trait WfResState extends WfaState {
 }
 
 /** an activity on a resource - the only one that can wait */
-case class WfResReq (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct with HasDsl with WfResState { 
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
+case class WfResReq (res:GRef, what:String, attrs:AC, value:AExpr) extends WfActivity with HasDsl with WfResState { 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (v,glinks.headOption.toList)
   
   def req (r: WResReq) = 
     AllResources resolve res map (_.req(r))
@@ -80,8 +80,8 @@ case class WfResReq (res:GRef, what:String, attrs:AC, value:XExpr) extends WfAct
  * 
  * Strongly suggest you do not overload this. If you need to, override the reply method to do whatever you want
  */
-class WfResReply extends WfAct with HasDsl with WfResState { 
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (rreply.map(_.result) getOrElse v,glinks.headOption.toList)
+class WfResReply extends WfActivity with HasDsl with WfResState { 
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (rreply.map(_.result) getOrElse v,glinks.headOption.toList)
   
   var rreply:Option[WResRROK] = None
 
@@ -96,7 +96,7 @@ class WfResReply extends WfAct with HasDsl with WfResState {
 /** a special resReply that ignores the value from the resource and just propagates the input value
  */
 class WfResReplyIgnore extends WfResReply { 
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = (v,glinks.headOption.toList)
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (v,glinks.headOption.toList)
   
   override def toDsl  = "ResReplyIgnore"
 }

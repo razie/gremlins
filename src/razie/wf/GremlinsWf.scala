@@ -20,8 +20,8 @@ case class RWPath (loc:GLoc, root:GRef, path:String) extends GPath (path) {} // 
 trait GremlinWf {
   // CRUD workflow lifecycle
   def c (defn:String, startV:Any) : GRef // create a workflow instance from definition
-  def c (defn:WfAct, startV:Any) : GRef  // create a workflow instance from definition
-  def r (id:GRef) : Option[WfAct]        // TODO optimize - don't make user load wf just for state
+  def c (defn:WfActivity, startV:Any) : GRef  // create a workflow instance from definition
+  def r (id:GRef) : Option[WfActivity]        // TODO optimize - don't make user load wf just for state
   def r_list () : List[GRef] // read all, curr state
   def u (who:GRef) // several types of udpate
   def d (who:GRef)
@@ -37,15 +37,15 @@ trait GremlinWf {
   def rollback (who:WPath)   
   
   // travel api
-  def supports (a:WfAct) : Boolean
-  def receive (a:WfAct) : WfHandle
+  def supports (a:WfActivity) : Boolean
+  def receive (a:WfActivity) : WfHandle
 }
 
 /** trait shared by gremlins - lifecycle management, basically */
 class GremlinWfImpl extends GremlinWf {
   def c (defn:String, startV:Any) : GRef = Engines() create (wf(defn), razie.base.scripting.ScriptFactory.mkContext(), startV)
-  def c (defn:WfAct, startV:Any) : GRef = null
-  def r (id:GRef) : Option[WfAct] = None
+  def c (defn:WfActivity, startV:Any) : GRef = null
+  def r (id:GRef) : Option[WfActivity] = None
   def r_list () : List[GRef] = List()
   def u (who:GRef) {}
   def d (who:GRef) {}
@@ -60,8 +60,8 @@ class GremlinWfImpl extends GremlinWf {
   def rollback (who:WPath)   = null
   
   // travel api
-  def supports (a:WfAct) : Boolean = false
-  def receive (a:WfAct) : WfHandle = null
+  def supports (a:WfActivity) : Boolean = false
+  def receive (a:WfActivity) : WfHandle = null
 }
 
 object Gremlins {

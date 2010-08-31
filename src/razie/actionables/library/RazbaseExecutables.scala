@@ -1,27 +1,27 @@
-/*
- * Razvan's public code. Copyright 2008 based on Apache license (share alike) see LICENSE.txt for
- * details.
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+ *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
+ *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
+ *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
 package razie.actionables.library
 
-import razie.actionables.ExecutableFactory
-import razie.actionables.IExecutable
-import razie.actionables.ActFactory
+import razie.actionables._
 
- /** factory for the basic executables offered 
-*/ 
- class RazbaseExecutables extends ExecutableFactory {
+/** factory for the basic executables offered  
+ * 
+ * @author razvanc
+ */
+object RazbaseExecutables extends ExecutableFactory {
    
    /** make an executable
     *
     * @param unifiedstring
     * @return
     */
-   override def make(unifiedstring:String) : IExecutable = {
-     val ActFactory.pat(domain, cmd, parens, args) = unifiedstring
+   override def make(unifiedstring:String) : razie.wf.JWFunc = {
+     val Executables.pat(domain, cmd, parens, args) = unifiedstring
      
-     require (domains contains domain, "need to support domain") 
-     require (commands(domain) contains cmd, "need to support command: "+cmd) 
+     require (cmds contains cmd, "need to support command: "+cmd) 
 
      cmd match {
        case "log" => new ExecLog
@@ -34,15 +34,11 @@ import razie.actionables.ActFactory
      }
 
    /** 
-    * @return the domains currently registered
-    */
-   override def domains() : Array[String] =  Array("simple")
-
-   /** 
     * @param domain
     * @return the actions in this domain
     */
-   override def commands(domain:String) : Array[String] = 
-     Array("log", "telnet", "add", "playkey", "cmdline", "shell", "pipe")
+   override def commands() : Array[razie.AI] =  cmds map (new razie.AI(_))
+     
+   val cmds = Array("log", "telnet", "add", "playkey", "cmdline", "shell", "pipe") 
 
  }

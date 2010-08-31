@@ -1,16 +1,16 @@
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+ *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
+ *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
+ *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
+ */
 package razie.wf
 
 import razie.base.{ActionContext => AC}
 import razie.g.GRef
 
-
-object WfAssetCmd {
-  def apply (action:String, asset:GRef, args:AC, expr:Map[String,XExpr]) : WfAct = 
-     new WfAssetCmd (action, asset, args, expr)
-}
-
-class WfAssetCmd (val action:String, val asset:GRef, val args:AC, val expr:Map[String,XExpr]) extends WfSimple with HasDsl {
-  override def traverse (in:AC, v:Any) : (Any,Seq[WL]) = {
+/** gremlin that invokes a command on an asset */
+case class WfAssetCmd (val action:String, val asset:GRef, val args:AC, val expr:Map[String,AExpr]) extends WfSimple with HasDsl {
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val toUse = razie.AA()
     toUse.setAttr(in) 
     toUse.setAttr(args) 

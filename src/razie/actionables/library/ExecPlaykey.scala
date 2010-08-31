@@ -1,3 +1,8 @@
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+ *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
+ *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
+ *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
+ */
 package razie.actionables.library
 
 import razie.actionables._
@@ -10,7 +15,7 @@ import java.awt.Robot;
 import java.awt.event.KeyEvent;
 
 /** play a key */
-class ExecPlaykey () extends razie.actionables.IExecutable {
+class ExecPlaykey () extends razie.wf.JWFunc {
 	def spec = new ActionableSpec(razie.AA("key=A,ctrl=no,shift=no"), razie.AA("result"));
 
    override def apply(in:ActionContext, v:Any):Any = {

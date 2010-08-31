@@ -1,16 +1,20 @@
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+ *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
+ *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
+ *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
+ */
 package razie.actionables.library;
 
 import razie.actionables.ActionableSpec;
-import razie.actionables.IExecutable;
 import razie.base._
 import com.razie.pub.base.log.Log;
 
 /**
- * stub - will print stuff
+ * log a message
  * 
  * @author razvanc
  */
-class ExecLog extends IExecutable {
+class ExecLog extends razie.wf.JWFunc {
 
 	def spec : ActionableSpec = new ActionableSpec(
 			razie.AA("msg=missing"), razie.AA("result"));

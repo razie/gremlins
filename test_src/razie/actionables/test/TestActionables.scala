@@ -21,27 +21,25 @@ class SimpleObjectImpl extends SimpleTrait {
 }
 
 class TestActionables extends JUnit3Suite {
-
-     ScalaExecFactory.reg ("simple", new RazbaseExecutables)
-     ExecutableFactory.init (ScalaExecFactory)
-     
+   import Actionables._
+   
   def test1 :Unit = expect ("s2over") {
     val exec = new FunExec ((x:ActionContext) => x.getAttr("arg0") + "over")
    
-    val aa = ActFactory.make ("sayBubu", null, null, exec)
+    val aa = make ("sayBubu", null, null, exec)
     val hasa = StaticAct.maker(List(aa))
    
-    val soso = ActionableFactory.makeProxy (new SimpleObjectImpl(), hasa).asInstanceOf[SimpleTrait]
+    val soso = makeProxy (new SimpleObjectImpl(), hasa).asInstanceOf[SimpleTrait]
     soso sayBubu "s2"
     }
   
   def testBoolean :Unit = expect (false) {
     val exec = new FunExec ((x:ActionContext) => new java.lang.Boolean(false))
    
-    val aa = ActFactory.make ("retTrue", null, null, exec)
+    val aa = make ("retTrue", null, null, exec)
     val hasa = StaticAct.maker(List(aa))
    
-    val soso = ActionableFactory.makeProxy (new SimpleObjectImpl(), hasa).asInstanceOf[SimpleTrait]
+    val soso = makeProxy (new SimpleObjectImpl(), hasa).asInstanceOf[SimpleTrait]
     soso.retTrue()
     }
 }

@@ -21,10 +21,10 @@ class CommChannel (val _name:String, val _size:Int) extends WQueue (_name, _size
  */
 object CSP extends CSP
 
-trait CSP extends WfLib[WfAct] with WfBaseLib[WfAct] {
+trait CSP extends WfLib[WfActivity] with WfBaseLib[WfActivity] {
   me =>
    
-  override def wrap (e:WfExec) : WfAct = razie.wf.WfWrapper (e)
+  override def wrap (e:WfExec) : WfActivity = razie.wf.WfWrapper (e)
 
   /** channel naming convention: it has to be unique in the same agent instance */
   object Channel {
@@ -43,7 +43,7 @@ trait CSP extends WfLib[WfAct] with WfBaseLib[WfAct] {
     new WfResReplyIgnore()
   
   /** template WA to put into a channel */
-  def put (cname:String, ve:XExpr) = 
+  def put (cname:String, ve:AExpr) = 
     WfChannel (cname) + 
     WfResReq (channelRef(cname), "put", AA(), ve) +
     new WfResReply ()
@@ -73,17 +73,17 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
   import CSP.$0
  
   /** channels have a different meaining for this */
-  override def | (x:WfAct) : WfAct = this + x
-//  override def | (x:WfAct*) : WfAct = x.foldRight (this.asInstanceOf[WfAct]) ((a,b)=>a + b)
+  override def | (x:WfActivity) : WfActivity = this + x
+//  override def | (x:WfActivity*) : WfActivity = x.foldRight (this.asInstanceOf[WfActivity]) ((a,b)=>a + b)
   
-  def ? (x:WfAct) = (this get $0) + x
+  def ? (x:WfActivity) = (this get $0) + x
   def ? (x:$Expr) = this get x
   def ! (x:$Expr) = this put x
   def ! (x:String) = this put x
-  def ! (x:WfAct) = x + (this put $0)
+  def ! (x:WfActivity) = x + (this put $0)
      
   /** out from process into channel */
-  def put (ve:XExpr) = { CSP.put (cname, ve) }
+  def put (ve:AExpr) = { CSP.put (cname, ve) }
   def put (ve:String) = { CSP.put (cname, new CExpr(ve)) }
   def -<- (x:$Expr) = this put x  // allow v(x) + P
   
@@ -93,9 +93,9 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
   def apply (x:$Expr) = this get x  // allow c(x) + P
   def apply () = this get $0  // allow c(x) + P
   
-  def * (x:WfAct) = this + x      // allow v("c") * P === v(c).P
-  def apply (x:WfAct) = this + x  // allow v(x) (P Q)
-  def apply (x:WfChannel => WfAct) = this + x(this)  // allow v(x) (P Q)
+  def * (x:WfActivity) = this + x      // allow v("c") * P === v(c).P
+  def apply (x:WfActivity) = this + x  // allow v(x) (P Q)
+  def apply (x:WfChannel => WfActivity) = this + x(this)  // allow v(x) (P Q)
 }
 
 /**
@@ -142,11 +142,11 @@ object PiCalc extends CSP {
 
 /** simple library */
 trait CspWcf extends WCFBase {
-//  override def activities () : Parser[WfAct] = cspwcflib
-  def cspwcflib : Parser[WfAct] = channel 
+//  override def activities () : Parser[WfActivity] = cspwcflib
+  def cspwcflib : Parser[WfActivity] = channel 
 
   def boo : Parser[Boolean] = "true" ^^ {s:String => true} | "false" ^^ {s:String => false}
-  def channel : Parser[WfAct] = "channel"~"("~boo~","~wholeNumber~","~"\""~ident~"\""~")" ^^ { case "channel"~"("~c~","~s~","~"\""~i~"\""~")" => new WfChannel(i, c, Integer.parseInt(s)) }
+  def channel : Parser[WfActivity] = "channel"~"("~boo~","~wholeNumber~","~"\""~ident~"\""~")" ^^ { case "channel"~"("~c~","~s~","~"\""~i~"\""~")" => new WfChannel(i, c, Integer.parseInt(s)) }
 } 
 
 //=================================================== samples

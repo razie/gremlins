@@ -6,6 +6,13 @@ import junit.framework.TestSuite;
 import org.scalatest.junit._
 import org.scalatest.SuperSuite
 
+/** main test suite */
+class SuiteWfNewXX extends SuperSuite (
+  List (
+    new razie.wf.test.WfLibTest
+  )
+)
+
 class SuiteWf () extends junit.framework.TestSuite(classOf[XNadaWf]) {
   
   // this is where you list the tests...
