@@ -9,16 +9,14 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 
 /** 
- * study 5 will settle the underlying workflow engine - there were some details not working in study4,
+ * these are the 
+ * TODO study 5 will settle the underlying workflow engine - there were some details not working in study4,
  * especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
  * up the simplicity of the traversing engine.
- * 
  * I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect 
  * the graph through its actions...this way there's no change in the engine - it remains simple graph 
  * traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced 
  * with WfScope)
- * 
- * I added the joins or "xxxEnd" nodes, the WfScope
  * 
  * @author razvanc
  */

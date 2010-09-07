@@ -14,22 +14,27 @@ import scala.actors._
 
 object Audit {
   private def audit (aa:AA) = razie.Audit (aa)
+  
+  val EV = "Event"
+  val PR = "process"
+  val AC = "activity"
+  val VAL = "value"
 
-  def recCreate   (a:Process) = audit (razie.AA("Event", "CREATE", "process", a))
-  def recStart    (a:Process, v:Any) = audit (razie.AA("Event", "START", "process", a, "value", v.asInstanceOf[AnyRef]))
-  def recDone     (a:Process, v:Any) = audit (razie.AA("Event", "DONE", "process", a, "value", v.asInstanceOf[AnyRef]))
+  def recCreate   (a:Process) = audit (razie.AA(EV, "CREATE", PR, a))
+  def recStart    (a:Process, v:Any) = audit (razie.AA(EV, "START", PR, a, VAL, v.asInstanceOf[AnyRef]))
+  def recDone     (a:Process, v:Any) = audit (razie.AA(EV, "DONE", PR, a, VAL, v.asInstanceOf[AnyRef]))
   def recExecBeg  (a:WfActivity, in:Any) =
-     audit (razie.AA("Event", "EXEC.beg", "activity", a, "in", in.asInstanceOf[AnyRef]))
+     audit (razie.AA(EV, "EXEC.beg", AC, a, "in", in.asInstanceOf[AnyRef]))
   def recExecEnd  (a:WfActivity, in:Any, out:Any, paths:Int) =
-     audit (razie.AA("Event", "EXEC.end", "activity", a, "in", in.asInstanceOf[AnyRef], "out",out.asInstanceOf[AnyRef], "paths", paths))
+     audit (razie.AA(EV, "EXEC.end", AC, a, "in", in.asInstanceOf[AnyRef], "out",out.asInstanceOf[AnyRef], "paths", paths))
   def recResNotFound  (a:WfActivity, res:GRef) =
-     audit (razie.AA("Event", "ERROR.resNotFound", "activity", a, "res", res))
+     audit (razie.AA(EV, "ERROR.resNotFound", AC, a, "res", res))
 }
 
 /** 
  * a process thread encapsulates the state of a running workflow branch. You can see this as an 
  * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
- * conceptually these are independent paths of execution, for the PAR/JOIN branches for isntance
+ * conceptually these are independent paths of execution, for the PAR/JOIN branches for instance
  */
 class ProcessThread (val parent:Process, val start:WfActivity, val startLink:Option[WfLink], val ctx:AC, val startValue:Any) { 
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
@@ -76,7 +81,8 @@ class ProcessThread (val parent:Process, val start:WfActivity, val startLink:Opt
     } else {
       nextAct = null 
       if (next.size > 1) 
-         next.map (l=>new ProcessThread(parent, l.z, Some(l), ctx, currV)) // // TODO what value to use for start here?
+         // TODO what value to use for start here?
+         next.map (l=>new ProcessThread(parent, l.z, Some(l), ctx, currV)) 
         // note that I'm done in this case and replace myself with these spawns
       else 
         Nil // done - no continuations
@@ -120,7 +126,7 @@ class Process (val start:WfActivity, val ctx:AC, startV:Any) {
   }
 
   // if ran sync, theaads list is relevant . when async, count is relevant
-  def done () : Boolean = synchronized { val b = /*currThreads.isEmpty ||*/ countThreads <= 0 ; Debug ("done="+b+" currThreads="+currThreads.size+" countThreads="+countThreads); b }
+  def done () : Boolean = synchronized { val b = /* currThreads.isEmpty || */ countThreads <= 0 ; Debug ("done="+b+" currThreads="+currThreads.size+" countThreads="+countThreads); b }
   
   def persist = "" // TODO
   def recover (s:Any) {} // TODO
@@ -326,9 +332,6 @@ object Engines {
 }
 
 abstract class ProcessWaitingOnRes (eng:Engine, who:ProcessThread, res:WRes) extends WResUser {
-  /** an acquire finished */
-  override def notifyAcquired (reply:WResReqReply) = {}
-  
   /** a wait finished */
   override def notifyReply (reply:WResReqReply) = {}
 

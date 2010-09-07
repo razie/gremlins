@@ -8,7 +8,7 @@ package razie.wf
 import razie.base.{ActionContext => AC}
 import razie.g.GRef
 
-/** gremlin that invokes a command on an asset */
+/** gremlin that invokes a command on an asset - see the snakked framework for details on assets */
 case class WfAssetCmd (val action:String, val asset:GRef, val args:AC, val expr:Map[String,AExpr]) extends WfSimple with HasDsl {
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val toUse = razie.AA()

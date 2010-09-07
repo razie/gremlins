@@ -3,7 +3,7 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf.lib
+package razie.wf.res
 
 import razie.AA
 import razie.base.{ActionContext => AC}
@@ -35,19 +35,14 @@ class WQueue (val name:String, val maxSize:Int) extends WRes {
   val consumers = new ListQueue[WResRRWAIT]()
   // producers is used when async, on top of values
   val producers = new ListQueue[WResRROK]()
-   
-  /** request acquire of resource - NOT a blocking call */
-  override def acquire (who:WResUser, token:String) = WResRROK (who, token, null)
-  /** notify release of resource - NOT a blocking call */
-  override def release (who:WResUser, token:String) = WResRROK (who, token, null)
-  
-  /** notify quit of whatever request outstanding - NOT a blocking call */
-  override def quit (who:WResUser, token:String) = throw new UnsupportedOperationException ()
 
   private[this] def push (a:Any) = { razie.Debug ("WQueue.push " + a); values push a}
   private[this] def pull = { val a = values.pull; razie.Debug ("WQueue.pull " + a); a}
   private[this] def pop  = { val a = values.pop; razie.Debug ("WQueue.pop " + a); a}
   
+  /** notify quit of whatever request outstanding - NOT a blocking call */
+  override def quit (who:WResUser, token:String) = throw new UnsupportedOperationException()
+
   /** notify quit of whatever request outstanding - NOT a blocking call */
   override def req (r:WResReq) : WResReqReply = synchronized { 
     debug ("pre  "+r)

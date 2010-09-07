@@ -9,7 +9,7 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.g._
 
-/** a resource. Resources have two things: wait/sync and acquire 
+/** a resource. Resources implement asynchronicity
  * 
  * <p>
  * A WfActivity can advertise that it needs a certain resource. The engine can then do some planning. 
@@ -23,36 +23,31 @@ import razie.g._
  * <li> IF the resource says RRWAIT, then the current processing thread is suspended waiting for the resource
  * 
  * TODO need lifecycle management - I might end up re-implementing JCAA ??
+ * TODO need transactionability - when to persist/rollback etc. should use context for that
  */
 trait WRes extends GReferenceable {
-  /** request acquire of resource - NOT a blocking call */
-  def acquire (who:WResUser, token:String)
-  /** notify release of resource - NOT a blocking call */
-  def release (who:WResUser, token:String)
-  
   /** notify quit of whatever request outstanding - NOT a blocking call */
   def quit (who:WResUser, token:String)
 
-  /** notify quit of whatever request outstanding - NOT a blocking call */
+  /** send a request - NOT a blocking call */
   def req (r:WResReq) : WResReqReply
 }
 
-  case class WResReq (who:WResUser, token:String, what:String, attrs:AC, value:Any)
+case class WResReq      (who:WResUser, token:String, what:String, attrs:AC, value:Any)
   
-  case class WResReqReply (who:WResUser, token:String)
-  case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WResReqReply (wwho, ttoken)
-  case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WResReqReply (wwho, ttoken)
-  case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WResReqReply (wwho, ttoken)
+     class WResReqReply (val who:WResUser, val token:String)
+case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WResReqReply (wwho, ttoken)
+case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WResReqReply (wwho, ttoken)
+case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WResReqReply (wwho, ttoken)
 
 /** a resource user - notification API basically */
 trait WResUser extends GReferenceable {
-  /** an acquire finished */
-  def notifyAcquired (reply:WResReqReply)
-  
   /** a wait finished */
   def notifyReply (reply:WResReqReply)
 
-  /** the resource screwed up - all outstanding requests were dismissed */
+  /** the resource screwed up - all outstanding requests were dismissed -
+   * client should cleanup all requests pending on this resource... the resource itself can't
+   */
   def notifyScrewup (who:WRes)
 }
 
