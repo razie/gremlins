@@ -19,7 +19,7 @@ object ProcState extends Enumeration {
 
 /* processing statuses indicate how the action is progressing */
 object ProcStatus extends Enumeration {
-  val WHATEVER, OK, NOTOK, LATE = Value
+  val WHATEVER, OK, NOTOK, LATE, STOPPED = Value
 }
 
 case class AuditEvent (val code : String, info:Any*) extends AA (info) 

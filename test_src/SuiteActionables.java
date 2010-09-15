@@ -1,7 +1,8 @@
-/**
- * Razvan's code. Copyright 2008 based on Apache (share alike) see LICENSE.txt for details.
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+ *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
+ *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
+ *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-
 import razie.actionables.test.TestActionables;
 import junit.framework.Test;
 import junit.framework.TestSuite;

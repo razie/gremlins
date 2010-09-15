@@ -30,20 +30,25 @@ trait WRes extends GReferenceable {
   def quit (who:WResUser, token:String)
 
   /** send a request - NOT a blocking call */
-  def req (r:WResReq) : WResReqReply
+  def req (r:WRes.Req) : WRes.ReqReply
 }
 
-case class WResReq      (who:WResUser, token:String, what:String, attrs:AC, value:Any)
+object WRes {
+  case class Req      (who:WResUser, token:String, what:String, attrs:AC, value:Any)
+       class ReqReply (val who:WResUser, val token:String)
+}
+
+//case class WRes.Req      (who:WResUser, token:String, what:String, attrs:AC, value:Any)
   
-     class WResReqReply (val who:WResUser, val token:String)
-case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WResReqReply (wwho, ttoken)
-case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WResReqReply (wwho, ttoken)
-case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WResReqReply (wwho, ttoken)
+//     class WRes.ReqReply (val who:WResUser, val token:String)
+case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WRes.ReqReply (wwho, ttoken)
+case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WRes.ReqReply (wwho, ttoken)
+case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WRes.ReqReply (wwho, ttoken)
 
 /** a resource user - notification API basically */
 trait WResUser extends GReferenceable {
   /** a wait finished */
-  def notifyReply (reply:WResReqReply)
+  def notifyReply (reply:WRes.ReqReply)
 
   /** the resource screwed up - all outstanding requests were dismissed -
    * client should cleanup all requests pending on this resource... the resource itself can't
@@ -54,18 +59,18 @@ trait WResUser extends GReferenceable {
 //-----------------
 
 trait WfResState extends WfaState {
-  var reply : Option[WResReqReply] = None
+  var reply : Option[WRes.ReqReply] = None
 }
 
 /** an activity on a resource - the only one that can wait */
-case class WfResReq (res:GRef, what:String, attrs:AC, value:AExpr) extends WfActivity with HasDsl with WfResState { 
+case class WfResReq (res:GRef, what:String, attrs:AC, value:AExpr, var tok : String = razie.g.GRef.uid()) extends WfActivity with HasDsl with WfResState { 
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (v,glinks.headOption.toList)
   
-  def req (r: WResReq) = 
+  def req (r: WRes.Req) = 
     AllResources resolve res map (_.req(r))
 //    AllResources resolve res map (_.req(who, token, what, attrs, value(in,v))) 
-  override def toString = "ResReq:" + res.meta+"."+what+" "+value
-  override def toDsl = "ResReq(" + res.toString+", "+what+", "+value.toDsl+")"
+  override def toString = toDsl
+  override def toDsl = "ResReq(" + res.toString+", " + tok + ", "+what+", "+value.toDsl+")"
 }
 
 /** follows a WfResReq and waits for a reply from the resource.
@@ -82,7 +87,7 @@ class WfResReply extends WfActivity with HasDsl with WfResState {
 
   // TODO handle non-OK answers as well
   /** process the reply from the resource. Normally keeps state somewhere as it will be followed by traverse() as the workflow continues */
-  def reply (r:WResReqReply) = rreply = Some(r.asInstanceOf[WResRROK])
+  def reply (r:WRes.ReqReply) = rreply = Some(r.asInstanceOf[WResRROK])
      
   override def toString = this.toDsl
   override def toDsl  = "ResReply"

@@ -44,9 +44,9 @@ import razie.wf._
 //----------------------- match/guard
   
 /** match AT MOST one branch */
-case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
+class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
   gnodes = Nil
-  glinks = e.l.map (WfLink(this,_))
+  glinks = e.l.map (new WfLink(this,_))
    
   /** return either branch, depending on cond */
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
@@ -56,7 +56,7 @@ case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
 //    (v, links.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WfLink(this,_))))
     for (i <- Range (0, glinks.size-1)) 
       if (ret.isEmpty) {
-        val r = glinks(i).z.asInstanceOf[WfCase1].apply(e).map (WfLink(this,_))
+        val r = glinks(i).z.asInstanceOf[WfCase1].apply(e).map (new WfLink(this,_))
         if (! r.isEmpty)
           ret = r.toList
       }
@@ -65,11 +65,11 @@ case class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
 }
 
 /** like wmatch but wguard matches ALL possibilities */
-case class WfGuard1 (_expr : () => Any, _e:WfCases1) extends WfMatch1 (_expr, _e) {
+class WfGuard1 (_expr : () => Any, _e:WfCases1) extends WfMatch1 (_expr, _e) {
   /** return either branch, depending on cond */
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val e = expr()
-    (v, glinks.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(WfLink(this,_))))
+    (v, glinks.flatMap(l => l.z.asInstanceOf[WfCase1].apply(e).map(new WfLink(this,_))))
   }
 }
 
@@ -98,7 +98,7 @@ protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
 
 class WfCase2[T <: Any] (val t : T) (a:WfActivity) extends WfSimple { 
    gnodes = a :: Nil
-   glinks = WfLink(this,a) :: Nil
+   glinks = new WfLink(this,a) :: Nil
    
    def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && value == t
   
@@ -129,7 +129,7 @@ class WfCaseAny2 (a:WfActivity) extends WfCase2(null)(a) {
 
 abstract class WfMatchBase extends WfActivity {
   gnodes = Nil
-  glinks = branches.map (WfLink(this,_))
+  glinks = branches.map (new WfLink(this,_))
   
   val expr : AExpr
   val branches : Seq[WfCase2[_]]

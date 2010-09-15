@@ -12,7 +12,7 @@ import razie.wf._
 //-------------------------------- basic activities
 
 /** simple activities just do their thing */
-case class WfSimple extends WfActivity { 
+class WfSimple extends WfActivity { 
   /** executing these means maybe doing something (in=>out) AND figuring out who's next */
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = this match {
      case a : WfExec => (a.apply(in, v), glinks)
@@ -20,8 +20,15 @@ case class WfSimple extends WfActivity {
   }
 }
 
+/** special engine activity to stop other parallel branches in the sam e scope */
+case class WfStopOthers () extends WfActivity with HasDsl { 
+  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
+  override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (v,glinks)
+  override def toDsl = "stopOthers"
+}
+
 /** simple activities just do their thing */
-case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
+class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl { 
   override def apply (in:AC, prevValue:Any) = wrapped.apply(in, prevValue)
   
   override def toString : String = wrapped match {
@@ -38,10 +45,10 @@ case class WfWrapper (wrapped:WfExec) extends WfSimple with WfExec with HasDsl {
 //------------------- begin / end subgraph
 
 /** sub-graph root, control node: create new control node linking to all others */
-case class WfStart (a:WfActivity*) extends WfSimple {  a map (this --> _) }
+class WfStart (a:WfActivity*) extends WfSimple {  a map (this --> _) }
 
 /** sub-graph end, control node: find all ends of subgraph and point to this end */
-case class WfEnd (a:WfActivity*) extends WfSimple { 
+class WfEnd (a:WfActivity*) extends WfSimple { 
   // find all distinct leafs and connect them to me distint because 1->2->4 and 1->3->4
   (a flatMap ( x => razie.g.Graphs.filterNodes[WfActivity,WfLink](x) {z => z.glinks.isEmpty} )).distinct foreach (i => i +-> this)
 }
@@ -50,22 +57,22 @@ case class WfEnd (a:WfActivity*) extends WfSimple {
  * the new proxy: contains a sub-graph.
  * will point to the entry point of its sub-graph and connect the end of it to itself.
  */
-case class WfScope (aa:WfActivity, var l:WfLink*) extends WfStart (aa) with HasDsl { 
-  WfScopeEnd (aa, l:_*)
+class WfScope (aa:WfActivity, var l:WfLink*) extends WfStart (aa) with HasDsl { 
+  new WfScopeEnd (aa, l:_*)
   override def toDsl = "scope " + (wf toDsl aa)
 }
 
 /** 
  * special activity - ends a scope and points to where the scope was meant to point to
  */
-case class WfScopeEnd (s:WfActivity, var l:WfLink*) extends WfEnd (s) { 
-  glinks = l.map(x=>{if (x.a == s) WfLink(this, x.z) else x})
+class WfScopeEnd (s:WfActivity, var l:WfLink*) extends WfEnd (s) { 
+  glinks = l.map(x=>{if (x.a == s) new WfLink(this, x.z) else x})
 }
 
 /** note that this proxy is stupid... see WfElse to understand why... */
-case class WfProxy (a:WfActivity, var l:WfLink*) extends WfSimple { 
+class WfProxy (a:WfActivity, var l:WfLink*) extends WfSimple { 
   // if the depy was from a to someone, update it to be this to someone...?
-  glinks = l.map(x=>{if (x.a == a) WfLink(this, x.z) else x})
+  glinks = l.map(x=>{if (x.a == a) new WfLink(this, x.z) else x})
     
   /** executing these means maybe doing something (in=>out) AND figuring out who's next */
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = (a.traverse(in, v)._1, glinks)
@@ -77,7 +84,7 @@ case class WfProxy (a:WfActivity, var l:WfLink*) extends WfSimple {
 //------------------------- selector
 
 /** selector activity - the basis for many other */
-case class WfSelOne (expr: WFunc[_] = WFuncNil) extends WfSimple { 
+class WfSelOne (expr: WFunc[_] = WFuncNil) extends WfSimple { 
 
   /** executing these means maybe doing something (in=>out) AND figuring out who's next */
   override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
@@ -103,7 +110,7 @@ case class WfSelOne (expr: WFunc[_] = WFuncNil) extends WfSimple {
 }
 
 /** selector activity - the basis for many other */
-case class WfSelMany (expr:WFunc[_]) extends WfSimple { 
+class WfSelMany (expr:WFunc[_]) extends WfSimple { 
 
    override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = {
     val sel = expr.apply (in, v)
@@ -113,9 +120,9 @@ case class WfSelMany (expr:WFunc[_]) extends WfSimple {
 
 //-------------------------funky
   
-case class WfLabel (name:String, aa:WfActivity) extends WfProxy (aa)
+class WfLabel (name:String, aa:WfActivity) extends WfProxy (aa)
   
-case class WfWhen (name:String, aa:WfActivity) extends WfProxy (aa) {
+class WfWhen (name:String, aa:WfActivity) extends WfProxy (aa) {
   // TODO needs to find the labeled one
   // TODO needs to wait 
 }
@@ -152,13 +159,13 @@ abstract class WfBound extends WfSimple {
    * 
    * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
    */
-  case class WfSeq (a:WfActivity*) extends WfBound with HasDsl {
+  class WfSeq (a:WfActivity*) extends WfBound with HasDsl {
     override def lastAct : WfActivity = glinks.lastOption.map(x=>gnodes.last).getOrElse(this)
     
     // wrap each in a proxy and link them in sequence
     gnodes = 
-      a.foldRight (Nil:List[WfActivity])((x,l) => wf.scope(x,l.headOption.map(WfLink(x,_)).toList:_*) :: l)
-    glinks = gnodes.firstOption.map(WfLink(this,_)).toList
+      a.foldRight (Nil:List[WfActivity])((x,l) => wf.scope(x,l.headOption.map(new WfLink(x,_)).toList:_*) :: l)
+    glinks = gnodes.headOption.map(new WfLink(this,_)).toList
     
     // to avoid seq(seq(t)) we redefine to just link to what i already have
     override def + (e:WfActivity) = {
@@ -166,7 +173,7 @@ abstract class WfBound extends WfSimple {
       if (glinks.lastOption.isDefined)
         gnodes.last --| p
       else 
-       glinks = List(WfLink(this,p)) 
+       glinks = List(new WfLink(this,p)) 
       gnodes = gnodes.toList ::: List(p) 
       this
       }
@@ -178,11 +185,11 @@ abstract class WfBound extends WfSimple {
    * 
    * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
    */
-  case class WfPar (a:WfActivity*) extends WfBound with HasDsl {
+  class WfPar (a:WfActivity*) extends WfBound with HasDsl {
     lazy val aj = new AndJoin()
     
     gnodes = a map wf.scope
-    glinks = gnodes map (x => WfLink(this,x))
+    glinks = gnodes map (x => new WfLink(this,x))
     this --| aj
     
     override def lastAct : WfActivity = glinks.lastOption.map(x=>gnodes.last).getOrElse(this)
@@ -190,7 +197,7 @@ abstract class WfBound extends WfSimple {
     // to avoid par(par(t)) we redefine to just link to what i already have
     override def | (e:WfActivity) = {
         val p = wf.scope(e)
-        glinks = List(WfLink(this,p)) ::: glinks.toList
+        glinks = List(new WfLink(this,p)) ::: glinks.toList
         gnodes = gnodes.toList ::: List(p) 
         p --| aj
       this
@@ -211,22 +218,22 @@ abstract class WfBound extends WfSimple {
   }
 
   /** scala code with no input nor return values */
-  case class WfScala (val f : () => Unit) extends WfSimple with WfExec { 
+  class WfScala (val f : () => Unit) extends WfSimple with WfExec { 
      override def apply (in:AC, v:Any) : Any = { f(); v }
   }   
 
   /** scala code with a return value but no input */
-  case class WfScalaV0 (val f : () => Any) extends WfSimple with WfExec { 
+  class WfScalaV0 (val f : () => Any) extends WfSimple with WfExec { 
      override def apply (in:AC, v:Any) : Any = f()
   }   
 
   /** scala code with input and return values */
-  case class WfScalaV1 (val f : (Any) => Any) extends WfSimple with WfExec { 
+  class WfScalaV1 (val f : (Any) => Any) extends WfSimple with WfExec { 
      override def apply (in:AC, v:Any) : Any = f(v)
   }   
 
   /** scala code with input and return values */
-  case class WfScalaV1u (val f : (Any) => Unit) extends WfSimple with WfExec { 
+  class WfScalaV1u (val f : (Any) => Unit) extends WfSimple with WfExec { 
      override def apply (in:AC, v:Any) : Any = { f(v); v }
   }   
 
@@ -252,7 +259,7 @@ extends WfSelOne (cond) with HasDsl {
        this.e = Some(WfElse (a)) // to make sure that for next welse is not empty
        this +-> Map(false -> this.e.get)
      } else // oops, is this an welse wif welse?
-       this.e.first.t match {
+       this.e.head.t match {
         case i : WfIf => i.welse(a)
         case _ => razie.Error ("a second welse clause") // TODO cause syntax error
      }

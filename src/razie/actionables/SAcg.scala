@@ -6,7 +6,7 @@
 package razie.actionables
 
 import org.w3c.dom._
-import com.razie.pub.base.data.RazElement
+import razie.base.data.RazElement
 
 object StaticAct {
   /** make a list of actionables from a list of actionables :) */

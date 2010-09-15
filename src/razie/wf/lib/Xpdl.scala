@@ -15,7 +15,7 @@ import razie.wf._
  */
 object xpdl extends WfLib[WfActivity] {
    
-  override def wrap (e:WfExec) : WfActivity = razie.wf.WfWrapper (e)
+  override def wrap (e:WfExec) : WfActivity = new razie.wf.WfWrapper (e)
 
   //-------------------------------- basic activities
 

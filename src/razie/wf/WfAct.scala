@@ -36,8 +36,8 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   override def toString : String = this.getClass().getSimpleName + "()"
   
   // syntax niceties 
-  def + (e:WfActivity) : WfActivity = WfSeq (this, e)
-  def | (e:WfActivity) : WfActivity = WfPar (this, e)
+  def + (e:WfActivity) : WfActivity = new WfSeq (this, e)
+  def | (e:WfActivity) : WfActivity = new WfPar (this, e)
 //  def | (e:Seq[WfActivity]) : WfActivity = WfPar ((this :: e.toList):_*)
   
   def print () : WfActivity = { println (this mkString); this}
@@ -46,7 +46,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   def run (initialValue : Any) : Any = 
     Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
 
-  implicit val linkFactory : LFactory = (x,y) => WfLink(x,y) // for the nice inherited --> operators 
+  implicit val linkFactory : LFactory = (x,y) => new WfLink(x,y) // for the nice inherited --> operators 
 
   // -------------- specific to WF? could move down?
   
@@ -61,12 +61,12 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
 }
  
 /** may want to store some color here...or have the link do something */
-case class WfLink (a:WfActivity, z:WfActivity) extends razie.g.GLink[WfActivity] with WflState 
+class WfLink (val a:WfActivity, val z:WfActivity) extends razie.g.GLink[WfActivity] with WflState 
 
 /** special link with a selector value. it assists the parent in deciding where to go next */
-case class WfLinkM (aa:WfActivity, zz:WfActivity, val selector:WFunc[Boolean]) extends WfLink (aa,zz)
+class WfLinkM (aa:WfActivity, zz:WfActivity, val selector:WFunc[Boolean]) extends WfLink (aa,zz)
  
 /** special link with a selector value. it assists the parent in deciding where to go next */
 //case class WfLinkV (aaa:WfActivity, zzz:WfActivity, val aselector:Any) extends WfLinkM (aaa,zzz, WFCMP(aselector))
-case class WfLinkV (aaa:WfActivity, zzz:WfActivity, val selector:Any) extends WfLink (aaa,zzz)
+class WfLinkV (aaa:WfActivity, zzz:WfActivity, val selector:Any) extends WfLink (aaa,zzz)
 

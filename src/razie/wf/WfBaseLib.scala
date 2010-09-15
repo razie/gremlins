@@ -30,8 +30,9 @@ abstract class Wfe2 (override val wname:String, val aa:razie.AA) extends WfExec 
 trait WfLib[T] extends WfLibrary[T] { 
   me =>
   def todo = me wrap new Wfe0 ("todo")
+  def todo (msg:String) = me wrap new Wfe0 ("todo" + msg)
   
-  implicit val linkFactory = (x,y) => WfLink(x,y)
+  implicit val linkFactory = (x,y) => new WfLink(x,y)
 }
 
 /** basic library of executables */
@@ -94,10 +95,11 @@ trait WfBaseLib[T] extends WfLib[T] {
 trait WCFBaseLib extends WCFBase {
 //  override def activities () : Parser[WfActivity] = wcfbaselib
   def wcfbaselib : Parser[WfActivity] = (
-        wlog | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore | assetcmd
+        wlog | wstopOthers | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore | assetcmd
         )
   
   def wlog: Parser[WfActivity] = "log"~"("~expr~")" ^^ {case "log"~"("~e~")" => wf.log (e)}
+  def wstopOthers: Parser[WfActivity] = "stopOthers" ^^ (x => new WfStopOthers())
   def wnop: Parser[WfActivity] = "nop" ^^ (x => wf.nop)
   def winc: Parser[WfActivity] = "inc"~opt("("~expr~")") ^^ {
      case "inc"~Some("("~e~")") => wf.inc(e)
@@ -116,8 +118,8 @@ trait WCFBaseLib extends WCFBase {
   def resReply : Parser[WfActivity] = "ResReply" ^^ { case _ => new razie.wf.WfResReply() }
   def resReplyIgnore : Parser[WfActivity] = "ResReplyIgnore" ^^ { case _ => new razie.wf.WfResReplyIgnore() }
   
-  def resReq : Parser[WfActivity] = "ResReq"~"("~nocomma~","~nocomma~","~expr~")" ^^ { 
-     case "ResReq"~"("~g~","~w~","~e~")" => new WfResReq(razie.g.GRef.parse(g), w, AA(), e) 
+  def resReq : Parser[WfActivity] = "ResReq"~"("~nocomma~","~nocomma~","~nocomma~","~expr~")" ^^ { 
+     case "ResReq"~"("~g~","~t~","~w~","~e~")" => new WfResReq(razie.g.GRef.parse(g), w, AA(), e, t) 
   }
   def nocomma : Parser[String] = """[^,]+""".r // ^^ { e => e }
   

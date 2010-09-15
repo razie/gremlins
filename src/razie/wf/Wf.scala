@@ -22,7 +22,7 @@ import razie.base.{ActionContext => AC}
  */
 object wf extends WfBaseLib[WfActivity] {
    
-  override def wrap (e:WfExec) : WfActivity = razie.wf.WfWrapper (e)
+  override def wrap (e:WfExec) : WfActivity = new razie.wf.WfWrapper (e)
 
   final val INDENT = "                                                                                       "
      
@@ -32,6 +32,25 @@ object wf extends WfBaseLib[WfActivity] {
      case a : HasDsl => a.toDsl
      case _ => throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
   }
+
+//  import razie.wf.res.WTimer
+//  def timeout (time:Long) (f: => WfActivity) : WfActivity = {
+//    val a = WfResReq (WTimer.gref, WTimer.WAIT, AA(), CExpr(time))
+//    val b = seq (
+//      f,  
+//      WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok))
+//      )
+//
+//    par (
+//      a +
+//        new WfResReply() +
+//        cancel (b),
+//      b
+//      )
+//  }
+
+  def cancel (x : WfActivity) : WfActivity = 
+    todo ("cancel a branch in progress")
    
   //----------------- base activitities
    
@@ -76,7 +95,7 @@ object wf extends WfBaseLib[WfActivity] {
   // --------------- seq, par
   
   def seq (a : WfActivity*) : WfActivity = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
-     if (a.size == 1 && a.first.glinks.isEmpty) a.first
+     if (a.size == 1 && a.head.glinks.isEmpty) a.head
      else new WfSeq (a:_*)
     
   def par (a : WfActivity*) : WfPar = new WfPar (a:_*)
@@ -114,10 +133,10 @@ object wfs {
   //----------------- base activitities
    
   // TODO this doesn't work if implicit...see ScaBug1
-  implicit def w   (f : => Unit) = WfScala (()=>f)
-  def w   (f : => Any) = WfScalaV0 (()=>f)
-  def wa  (f : Any => Any) = WfScalaV1 ((x)=>f(x))
-  implicit def wau (f : Any => Unit) = WfScalaV1u ((x)=>f(x))
+  implicit def w   (f : => Unit) = new WfScala (()=>f)
+  def w   (f : => Any) = new WfScalaV0 (()=>f)
+  def wa  (f : Any => Any) = new WfScalaV1 ((x)=>f(x))
+  implicit def wau (f : Any => Unit) = new WfScalaV1u ((x)=>f(x))
   
   def apply (f : => Unit) = w(f)
   def apply (f : => Any) = w(f)
@@ -130,17 +149,17 @@ object wfs {
   implicit def wc0 (cond : Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond }
   def wc1 (cond : Any => Boolean) : WFunc[Boolean] = new WFunc[Boolean] { override def apply (in:AC, v:Any) = cond(v) }
   
-  def wuif (cond : FB) (f: => Unit)    = WfIf (cond, WfScala(()=>f))
-  def wsif  (cond : FB) (f: => Any)     = WfIf (cond, WfScalaV0(()=>f))
-  def waif (cond : Cond1) (f: Any => Any) = WfIf (wc1(cond), WfScalaV1((x)=>f(x)))
-  def waif (cond : FB) (f: Any => Any) = WfIf (cond, WfScalaV1((x)=>f(x)))
-  def wauif (cond : FB) (f: Any => Unit)= WfIf (cond, WfScalaV1((x)=>f(x)))
+  def wuif (cond : FB) (f: => Unit)    = WfIf (cond, new WfScala(()=>f))
+  def wsif  (cond : FB) (f: => Any)     = WfIf (cond, new WfScalaV0(()=>f))
+  def waif (cond : Cond1) (f: Any => Any) = WfIf (wc1(cond), new WfScalaV1((x)=>f(x)))
+  def waif (cond : FB) (f: Any => Any) = WfIf (cond, new WfScalaV1((x)=>f(x)))
+  def wauif (cond : FB) (f: Any => Unit)= WfIf (cond, new WfScalaV1((x)=>f(x)))
   
   //----------------- match
   
   // def wmatch1 (expr : =>Any) (f: PartialFunction[Any, Unit]) = WfMatch1 (()=>expr, WfCaseB (()=>expr, (x:Any)=>f.apply(x)))
-  def wmatch1 (expr : =>Any) (f: WfCases1) = WfMatch1 (()=>expr, f)
-  def wguard1 (expr : =>Any) (f: WfCases1) = WfGuard1 (()=>expr, f)
+  def wmatch1 (expr : =>Any) (f: WfCases1) = new WfMatch1 (()=>expr, f)
+  def wguard1 (expr : =>Any) (f: WfCases1) = new WfGuard1 (()=>expr, f)
   def wcase1 (f: => PartialFunction[Any, WfActivity]) = new WfCase1(f)
   def wcaseany1 (f: WfActivity) = new WfCaseAny1(f)
   

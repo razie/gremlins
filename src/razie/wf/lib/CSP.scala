@@ -18,20 +18,24 @@ class CommChannel (val _name:String, val _size:Int) extends WQueue (_name, _size
 
 /** 
  * CSP - channel based communication between processes - implies multi-way synchronization on channels
+ *
+ * Note that I don't really find a good distinction between CSP and PI - see it all under PiCalc below
  */
 object CSP extends CSP
 
 trait CSP extends WfLib[WfActivity] with WfBaseLib[WfActivity] {
   me =>
    
-  override def wrap (e:WfExec) : WfActivity = razie.wf.WfWrapper (e)
+  override def wrap (e:WfExec) : WfActivity = new razie.wf.WfWrapper (e)
 
   /** channel naming convention: it has to be unique in the same agent instance */
   object Channel {
      /** creates a channle with a unique ID recommended approach */
      def apply () = WfChannel(GRef.uid, true)
-     /** creates a channle with a given name - NOTE that the name is shared across this AgentJVM */
-     def apply (name:String, size:Int = 0) = WfChannel(name, true, size)
+     /** creates a channle with a given name - NOTE that the name is shared across this AgentJVM
+      * @param size how many values to buffer - 0 means blocking
+      */
+     def apply (name:String, size:Int) = WfChannel(name, true, size)
      def resolve (name:String, size:Int) = AllResources.resolveOrCreate(GRef.id("WQueue", name)) { new CommChannel (name, size) }
      def destroy (name:String) = AllResources remove GRef.id("WQueue", name)
   }
@@ -58,14 +62,17 @@ trait CSP extends WfLib[WfActivity] with WfBaseLib[WfActivity] {
   def channelRef (name:String) = GRef.id ("WQueue", name)
 }
 
-/** special workflow activity to define/use a channel. It's used to inject channel syntax into workflow, like "c ! P" */
+/**
+ * special workflow activity to define/use a channel.
+ * It's used to inject channel syntax into workflow, like "c ! P" 
+ */
 case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends razie.wf.WfWrapper (
       
   new Wfe1 ("channel", CExpr (cname)) {
     override def apply(in:AC, v:Any) = {
       import CSP.Channel
       val x = Channel resolve (cname, size)
-      if (clear) x.get.asInstanceOf[CommChannel].clear
+      if (clear) x.get.asInstanceOf[WQueue].clear
       v
     }
   override def toDsl = "channel ("+clear+","+size+","+expr.toDsl+")"
@@ -100,13 +107,17 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
 
 /**
  *  PI calculus http://en.wikipedia.org/wiki/Pi-calculus
+ *
+ *  PI calculus is in essence "parallel processes, communicating via named channels".
  * 
  *  PI syntax   our syntax                         description                   
  *  P | Q                                          P and Q in paqrallel
  *              P | Q                              P and Q in paqrallel
+ * 
  *  (v c) P                                        define channel c
  *              v("c")  
  *              val c = v("c")    
+ * 
  *  c(x).P                                         read x do P
  *              c ? P                              - implies $0 the default value
  *              c($("x")) + P   
@@ -114,6 +125,7 @@ case class WfChannel (cname:String, clear:Boolean = false, size:Int = 1) extends
  *              val x = $("x"); c(x) + P 
  *              c() + P          
  *              c.get($0) + P          
+ * 
  *  c<x>.P                                         do P then write x in c
  *              c ! P                              - implies $0 the default value
  *              P + c.put($0) 
@@ -146,44 +158,16 @@ trait CspWcf extends WCFBase {
   def cspwcflib : Parser[WfActivity] = channel 
 
   def boo : Parser[Boolean] = "true" ^^ {s:String => true} | "false" ^^ {s:String => false}
-  def channel : Parser[WfActivity] = "channel"~"("~boo~","~wholeNumber~","~"\""~ident~"\""~")" ^^ { case "channel"~"("~c~","~s~","~"\""~i~"\""~")" => new WfChannel(i, c, Integer.parseInt(s)) }
+  def channel : Parser[WfActivity] = "channel"~"("~boo~","~wholeNumber~","~"\""~ident~"\""~")" ^^ { 
+    case "channel"~"("~c~","~s~","~"\""~i~"\""~")" => new WfChannel(i, c, Integer.parseInt(s)) 
+    }
 } 
 
-//=================================================== samples
 
-object PiSamples extends Application {
-  import PiCalc._
- 
-  def c = Channel("c") // channel c
-  def x = $("x") // variable x
-  
-  def myp01 = v(c) (P | Q)
-  println (wf toDsl myp01)
-  require ((wf(wf toDsl myp01).print run "1").asInstanceOf[List[_]] contains "1-P")
-  
-  def myp02 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )
-  println (wf toDsl myp02)
-  require ((wf(wf toDsl myp02).print run "1").asInstanceOf[List[_]] contains "1-Q-P")
-  
-  def myp11 = v(c) + P  // correct (v c) P
-  require ((myp11.print run "1") == "1-P")
-  
-  def myp21 = v(c) ( c.put($0) --> P )
-  def myp22 = v(c) ( c -<- $0 + P )
-  def myp23 = v(c)
-  require ((myp21 run "1") == "1-P")
-  require ((myp22 run "1") == "1-P")
-  require ((myp23 run "1") == "1")
-
-  // channel exists, read+P : P waits to read a value and then continues
-  def myp31  = c($0) + P        // correct x(0) P
-  def myp32 = c ->- $0 + P  // correct x(0) P
-  require (((c.put(4) --> myp31).print run "1") == "4-P")
-  require (((c.put(4) --> myp32).print run "1") == "4-P")
- 
-  def myp41 = v(c) (c.get($0) --> P | c.put($0) <-- Q)  // correct v(c) ( c(0) P | c<0> Q )
-  require ((myp41.print run "1").asInstanceOf[List[_]] contains "1-Q-P")
-
-  Engines().stop
+/* ambient calculus // http://en.wikipedia.org/wiki/Ambient_calculus
+ *
+ * TODO
+ */
+object ambients {
 }
 

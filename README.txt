@@ -13,7 +13,8 @@ Razie's playground for workflows, asynchronous stuff and generic actionables.
 
 Why?
 ----
-Threads, shared state, actors, processes...they're all stepping stones. A framework that allows full expressivity for creating asynchronous/parallel and distributed work units are what we need.
+Threads, shared state, actors, processes...they're all stepping stones. A framework that allows full expressivity for creating 
+asynchronous/parallel and distributed work units are what we need.
 
 The three ingredients are: flexibility, expressivity and low cost.
 
