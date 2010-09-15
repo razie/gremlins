@@ -6,39 +6,6 @@
  *  Copyright (c) Razvan Cojocaru, 2007+, Creative Commons Attribution 3.0
  */
 
-What's this?
-------------
-Razie's playground for workflows, asynchronous stuff and generic actionables.
-
-
-Why?
-----
-Threads, shared state, actors, processes...they're all stepping stones. A framework that allows full expressivity for creating 
-asynchronous/parallel and distributed work units are what we need.
-
-The three ingredients are: flexibility, expressivity and low cost.
-
-Cost to create a workflow must be low. That implies graphical representations, DSL etc. Cost to run this framework must be low. Cost to re-configure, debug and operate must be low.
-
-The framework must allow users to express any construct they can think of and support it.
-
-Flexibility is a trait embedded in the scala language. The framework must be flexible so new patterns, constructs and whatnot be allowed.
-
-
-Details
--------
-The code is generally self-documented. Keep your eyes out for package.html and similar stuff.
-
-This is an investigation of the concept, so far.
-
-
-Roadmap
--------
-I will only maintain this as I need to. If there's some large user community developing (doubt that, really), 
-we'll see - I could co-op some volunteers.
-
-I will add more code as I need it/write it for all kinds of reasons.
-
 Developing & Building
 ---------------------
 
@@ -64,14 +31,15 @@ Here's how to build it:
   cd ${w}/20widgets/src/public
   git clone git@github.com:razie/CodeMirror.git
 
-4. edit ${w}/razbase/razie.properties and set the w property to the workspace
+4. ant build
+-  edit ${w}/razbase/razie.properties and set the w property to the workspace
 
-5. build all and create the dist jar file:
+-  build all and create the dist jar file:
 
    cd ${w}/scripster
    ant clean-all build-all dist
 
-6. If you're having problems with out of memory, you have to build each:
+-  If you're having problems with out of memory, you have to build each:
 
    for ff in "razbase 20widgets 20widgets-swing razweb scripster gremlins"
    do
@@ -79,7 +47,15 @@ Here's how to build it:
    done
    ant -f scripster/build.xml dist
 
-7. Eclipse setup
+5. sbt build
+
+   for ff in "razxml razbase 20widgets 20widgets-swing razweb scripster gremlins"
+   do
+      cd $ff
+      sbt update publish-local
+   done
+
+7. .Eclipse setup
 
    * install the scala 2.8 plugin and the svn plugin
    * download a 2.8 scala distribution someplace, i.e. bin/scala - will need the complier.jar
@@ -96,3 +72,4 @@ Here's how to build it:
 
 
 Good luck!
+

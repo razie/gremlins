@@ -1,14 +1,4 @@
 
-Razie's Pub Workflow Engine
-===========================
-
-I've been meaning to write a workflow engine/language for sometime and recently, some scala DSL 
-discussions gave me the motive. I know there's tons of workflow products but none complete and to my liking.
-
-Anyways, evolution requires diversity, so enough rationalization (there's more at the bottom), let's 
-dive into the fun stuff!
-
-
 Razie's Workflow Vision: Gremlins
 =================================
 
@@ -28,6 +18,10 @@ control into those, wouldn't you? You could cascade a suspend or roll-up some in
 The basic processing engine is thus nothing more than a graph traversal / visitor. However - forget the 
 visitor pattern, these nodes are object-oriented and encapsulate their own logic.
 
+
+Workflow patterns and building blocks
+-------------------------------------
+
 Common patterns are expressed in terms of the basic constructs, to create new, higher-level logic and 
 structures.
 
@@ -36,6 +30,10 @@ distribution and workflows. I see all preceeding techniques as steps, identifyin
 here. 
 The only programming model worth learning is the workflow...the others are good maybe for a history class. 
 Disclaimer: although there is none, no false modesty was wasted in the making of the above paragraph :))
+
+
+Design
+======
 
 So, what we need is:
 
