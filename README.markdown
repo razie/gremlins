@@ -45,6 +45,7 @@ There's more details in the vision page, but these are the basic principles behi
 5. There's a gremlin distribution API, uniformly implemented by all engines and components in a cloud
 6. Branches (sections of the graph) of a bigger workflow could run on multiple devices/agents
 7. Distributed branches, wherever they run, can be related back and managed as a unit
+8. Since these are all plain graphs, certain graph transformations can be used to turn a state machine into a workflow or a PI into a BPEL or whatever you want into whatever you'd like...
 
 
 Examples

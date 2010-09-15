@@ -16,7 +16,7 @@ Classes like <code>WfAct</code> and <code>WL</code> describe this level of the w
 GGS (Generic Graph Stuff)
 -------------------------
 
-Simple, recursive, graph stuff is in the <code>razie.g</code> package, in the razbase project. 
+Simple, recursive, graph stuff is in the [razie.g](/razie/razbase/blob/master/src/razie/g) package, in the razbase project. 
 As much generic graph manipulation stuff goes there. This includes stiching sub-graphs etc.
 
 
@@ -26,6 +26,8 @@ Functionality stuff
 Well, each gremlin must do something, so those that do, implement the WFunc trait.
 In good scala tradition, each one returns a value (it can also modify the context/state, but it shouldn't,
 in the best functional tradition).
+
+There's a library of activities (like running shell or telnet) in [razie.actionables](http://github.com/razie/gremlins/tree/master/src/razie/actionables).
 
 
 Engine
