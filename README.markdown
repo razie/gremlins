@@ -1,10 +1,10 @@
-/**  ____    __    ____  ____  ____/___      ____  __  __  ____
- *  (  _ \  /__\  (_   )(_  _)( ___) __)    (  _ \(  )(  )(  _ \
- *   )   / /(__)\  / /_  _)(_  )__)\__ \     )___/ )(__)(  ) _ <
- *  (_)\_)(__)(__)(____)(____)(____)___/    (__)  (______)(____/
- *                      
- *  Copyright (c) Razvan Cojocaru, 2007+, Creative Commons Attribution 3.0
- */
+    /**  ____    __    ____  ____  ____/___      ____  __  __  ____
+     *  (  _ \  /__\  (_   )(_  _)( ___) __)    (  _ \(  )(  )(  _ \
+     *   )   / /(__)\  / /_  _)(_  )__)\__ \     )___/ )(__)(  ) _ <
+     *  (_)\_)(__)(__)(____)(____)(____)___/    (__)  (______)(____/
+     *                      
+     *  Copyright (c) Razvan Cojocaru, 2007+, Creative Commons Attribution 3.0
+     */
 
 
 Razie's Pub Workflow Engine
@@ -16,7 +16,7 @@ discussions gave me the motive. I know there's tons of workflow products but non
 Anyways, evolution requires diversity, so enough rationalization (there's more at the bottom), let's 
 dive into the fun stuff!
 
-Read more about the [vision](blob/master/Gremlins.markdown), [how to build](blob/master/Building.markdown) or the [design](blob/master/src/razie/wf/Design.markdown).
+Read more about the [vision](gremlins/blob/master/Gremlins.markdown), [how to build](gremlins/blob/master/Building.markdown) or the [design](gremlins/blob/master/src/razie/wf/Design.markdown).
 
 
 Why?
@@ -43,7 +43,8 @@ There's more details in the vision page, but these are the basic principles behi
 3. There's only a small set of base/core activities.
 4. Complex activities are built as patterns or templates from lower-level activities
 5. There's a gremlin distribution API, uniformly implemented by all engines and components in a cloud
-6. All branches of a bigger workflow, wherever they run, can be related back and managed as a unit
+6. Branches (sections of the graph) of a bigger workflow could run on multiple devices/agents
+7. Distributed branches, wherever they run, can be related back and managed as a unit
 
 
 Examples
@@ -53,20 +54,20 @@ Examples
 v(c) (c ? P | c ! Q)
 --------------------
 
-PI/CSP examples in [CspDemo.scala](blob/master/src/razie/wf/lib/CspDemo.scala)
+PI/CSP examples in [CspDemo.scala](gremlins/blob/master/src/razie/wf/lib/CspDemo.scala)
 
-    def P = wf.log($0 + "-P")                                                                                                             
-    def Q = wf.log($0 + "-Q")                                                                                                             
+    def P = wf.log($0 + "-P")
+    def Q = wf.log($0 + "-Q")
     def c = Channel("c", 0) // channel c, blocking
                                                                                                                                         
-    def myp02 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )                                                                 
+    def myp02 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )
     myp02 run "1" == List("1-Q", "1-Q-P")
 
 
 Scala DSL Structure
 -------------------
 
-Basic DSL contrast (scala vs text) in [WfBaseTest.scala](blob/master/test_src/razie/wf/test/WfBaseTest.scala)
+Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
 
     def wif1 = 
     wif (_ == 1) {  // no good, really - condition not serializable
@@ -90,7 +91,7 @@ Basic DSL contrast (scala vs text) in [WfBaseTest.scala](blob/master/test_src/ra
 Text DSL Structure
 ------------------
 
-Basic DSL examples in [WfBaseTest.scala](blob/master/test_src/razie/wf/test/WfBaseTest.scala)
+Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
 
       def wpar5 = """                                                                                                                       
     par {                                                                                                                                   
