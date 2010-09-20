@@ -65,8 +65,8 @@ PI/CSP examples in [CspDemo.scala](gremlins/blob/master/src/razie/wf/lib/CspDemo
     myp02 run "1" == List("1-Q", "1-Q-P")
 
 
-Scala DSL Structure
--------------------
+Internal Scala DSL Structure
+----------------------------
 
 Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
 
@@ -89,8 +89,8 @@ Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/te
   
 
 
-Text DSL Structure
-------------------
+External DSL Structure
+-----------------------------
 
 Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
 
@@ -108,3 +108,74 @@ Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/
                                                                                                                                         
       def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }                                                                        
 
+
+And, why this workflows library is interesting
+----------------------------------------------
+
+This code 
+
+    def myp02 = v(c) (c ? P | c ! Q) 
+    
+    println (wf toDsl myp02)
+    myp02.print 
+    println ("RRRRRRRRRRRRRESULT is: " + (myp02 run "1"))
+  
+Will produce this result:
+
+    seq {
+      channel (true,0,"c")
+      scope par {
+        scope seq {
+          channel (false,1,"c")
+          ResReq(razie.gidref:WQueue:c, Uid-2-1284989059919, get, $0)
+          ResReply
+          assign $0=$0
+          log ($0 + "-P")
+        }
+        scope seq {
+          log ($0 + "-Q")
+          scope seq {
+            channel (false,1,"c")
+            ResReq(razie.gidref:WQueue:c, Uid-3-1284989060116, put, $0)
+            ResReply
+          }
+        }
+      }
+    }
+    
+    Graph: 
+    WfSeq()
+    ->channel (true,0,"c")
+     ->WfScope()
+      ->WfPar()
+       ->WfScope()
+        ->WfSeq()
+         ->channel (false,1,"c")
+          ->ResReq(razie.gidref:WQueue:c, Uid-4-1284989060211, get, $0)
+           ->ResReply
+            ->assign $0=$0
+             ->log ($0 + "-P")
+              ->WfScopeEnd()
+               ->AndJoin 0
+                ->WfScopeEnd()
+       ->WfScope()
+        ->WfSeq()
+         ->log ($0 + "-Q")
+          ->WfScope()
+           ->WfSeq()
+            ->channel (false,1,"c")
+             ->ResReq(razie.gidref:WQueue:c, Uid-5-1284989060213, put, $0)
+              ->ResReply
+               ->WfScopeEnd()
+                ->WfScopeEnd()
+                 ->AndJoin 0
+                  ->WfScopeEnd()
+    
+    RRRRRRRRRRRRRESULT is: List(1-Q-P, 1-Q)
+
+The point is that a simple workflow can be created via internal or external DSL, it is turned
+into a graph, which then executes. This graph can be mapped to a visual representation 
+(say using BPEL)
+
+
+    
