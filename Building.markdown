@@ -19,43 +19,43 @@ Here's how to build it:
 2. Make a workspace directory ${w}
 3. checkout the following projects
 
-   cd ${w}
-   git clone git@github.com:razie/razxml.git
-   git clone git@github.com:razie/razbase.git
-   git clone git@github.com:razie/20widgets.git
-   git clone git@github.com:razie/20widgets-swing.git
-   git clone git@github.com:razie/razweb.git
-   git clone git@github.com:razie/scripster.git
-   git clone git@github.com:razie/gremlins.git
+    cd ${w}
+    git clone git@github.com:razie/razxml.git
+    git clone git@github.com:razie/razbase.git
+    git clone git@github.com:razie/20widgets.git
+    git clone git@github.com:razie/20widgets-swing.git
+    git clone git@github.com:razie/razweb.git
+    git clone git@github.com:razie/scripster.git
+    git clone git@github.com:razie/gremlins.git
 
 3.1. for 20widgets, hack a bit - have to checkout my fork of CodeMirror in this specific location
 
-  cd ${w}/20widgets/src/public
-  git clone git@github.com:razie/CodeMirror.git
+    cd ${w}/20widgets/src/public
+    git clone git@github.com:razie/CodeMirror.git
 
 4. sbt build
 
-   for ff in "razxml razbase 20widgets 20widgets-swing razweb scripster gremlins"
-   do
+    for ff in "razxml razbase 20widgets 20widgets-swing razweb scripster gremlins"
+    do
       cd $ff
       sbt update publish-local
-   done
+    done
 
 5. ant build
 -  edit ${w}/razbase/razie.properties and set the w property to the workspace
 
 -  build all and create the dist jar file:
 
-   cd ${w}/scripster
-   ant clean-all build-all dist
+    cd ${w}/scripster
+    ant clean-all build-all dist
 
 -  If you're having problems with out of memory, you have to build each:
 
-   for ff in "razbase 20widgets 20widgets-swing razweb scripster gremlins"
-   do
+    for ff in "razbase 20widgets 20widgets-swing razweb scripster gremlins"
+    do
       ant -f $f/build.xml clean build jar-only
-   done
-   ant -f scripster/build.xml dist
+    done
+    ant -f scripster/build.xml dist
 
 7. .Eclipse setup
 
