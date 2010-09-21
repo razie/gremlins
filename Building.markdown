@@ -16,7 +16,9 @@ The sbt and eclipse are actively maintained...
 Here's how to build it:
 
 1 Setup ant and scala
+
 2 Make a workspace directory ${w}
+
 3 checkout the following projects
 
     cd ${w}
