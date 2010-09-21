@@ -15,33 +15,33 @@ The sbt and eclipse are actively maintained...
 
 Here's how to build it:
 
-1. Setup ant and scala
-2. Make a workspace directory ${w}
-3. checkout the following projects
+1 Setup ant and scala
+2 Make a workspace directory ${w}
+3 checkout the following projects
 
-      cd ${w}
-      git clone git@github.com:razie/razxml.git
-      git clone git@github.com:razie/razbase.git
-      git clone git@github.com:razie/20widgets.git
-      git clone git@github.com:razie/20widgets-swing.git
-      git clone git@github.com:razie/razweb.git
-      git clone git@github.com:razie/scripster.git
-      git clone git@github.com:razie/gremlins.git
+    cd ${w}
+    git clone git@github.com:razie/razxml.git
+    git clone git@github.com:razie/razbase.git
+    git clone git@github.com:razie/20widgets.git
+    git clone git@github.com:razie/20widgets-swing.git
+    git clone git@github.com:razie/razweb.git
+    git clone git@github.com:razie/scripster.git
+    git clone git@github.com:razie/gremlins.git
 
 3.1. for 20widgets, hack a bit - have to checkout my fork of CodeMirror in this specific location
 
     cd ${w}/20widgets/src/public
     git clone git@github.com:razie/CodeMirror.git
 
-4. sbt build
+4 sbt build
 
-    for ff in "razxml razbase 20widgets 20widgets-swing razweb scripster gremlins"
+    for ff in "razbase 20widgets 20widgets-swing razweb scripster gremlins"
     do
-      cd $ff
+      cd ${w}/$ff
       sbt update publish-local
     done
 
-5. ant build
+5 ant build
 -  edit ${w}/razbase/razie.properties and set the w property to the workspace
 
 -  build all and create the dist jar file:
@@ -57,7 +57,7 @@ Here's how to build it:
     done
     ant -f scripster/build.xml dist
 
-7. .Eclipse setup
+7 .Eclipse setup
 
    * install the scala 2.8 plugin and the svn plugin
    * download a 2.8 scala distribution someplace, i.e. bin/scala - will need the complier.jar
