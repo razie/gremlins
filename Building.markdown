@@ -19,14 +19,14 @@ Here's how to build it:
 2. Make a workspace directory ${w}
 3. checkout the following projects
 
-    cd ${w}
-    git clone git@github.com:razie/razxml.git
-    git clone git@github.com:razie/razbase.git
-    git clone git@github.com:razie/20widgets.git
-    git clone git@github.com:razie/20widgets-swing.git
-    git clone git@github.com:razie/razweb.git
-    git clone git@github.com:razie/scripster.git
-    git clone git@github.com:razie/gremlins.git
+      cd ${w}
+      git clone git@github.com:razie/razxml.git
+      git clone git@github.com:razie/razbase.git
+      git clone git@github.com:razie/20widgets.git
+      git clone git@github.com:razie/20widgets-swing.git
+      git clone git@github.com:razie/razweb.git
+      git clone git@github.com:razie/scripster.git
+      git clone git@github.com:razie/gremlins.git
 
 3.1. for 20widgets, hack a bit - have to checkout my fork of CodeMirror in this specific location
 
