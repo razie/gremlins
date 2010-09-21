@@ -18,7 +18,7 @@ abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {
 }
 
 /** arithmetic expressions */
-case class AExpr (e : String) extends Expr[Any] (e) {
+class AExpr (val e : String) extends Expr[Any] (e) {
   override def apply (in:AC, v:Any) : Any = e
   
   def + [T <:Any] (t:T) = t match {

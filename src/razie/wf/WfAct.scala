@@ -17,7 +17,7 @@ import razie.g._
  * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
 abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaState with razie.g.WRGraph[WfActivity, WfLink] {
-  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
+//  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
   override var glinks : Seq[WfLink] = Nil // links 
    
   /** the engine is traversing the graph...similar to executing it.
@@ -33,7 +33,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   def traverse (in:AC, v:Any) : (Any,Seq[WfLink])
   def traverse (from: Option[WfLink], in:AC, v:Any) : (Any,Seq[WfLink]) = traverse (in, v)
     
-  override def toString : String = this.getClass().getSimpleName + "()"
+  override def toString : String = this.getClass().getSimpleName + "("+key+")"
   
   // syntax niceties 
   def + (e:WfActivity) : WfActivity = new WfSeq (this, e)
@@ -43,8 +43,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   def print () : WfActivity = { println (this mkString); this}
   
   // simplified execution
-  def run (initialValue : Any) : Any = 
-    Engines().exec(this, razie.base.scripting.ScriptFactory.mkContext(), initialValue)
+  def run (initialValue : Any) : Any = Engines().exec(this, initialValue)
 
   implicit val linkFactory : LFactory = (x,y) => new WfLink(x,y) // for the nice inherited --> operators 
 

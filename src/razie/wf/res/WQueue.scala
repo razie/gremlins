@@ -9,10 +9,11 @@ import razie.AA
 import razie.base.{ ActionContext => AC }
 import razie.wf._
 import razie.g._
+import scala.collection.mutable.ListBuffer
 
 /** simple queue implementation */
 class ListQueue[T] {
-  val q = new scala.collection.mutable.ListBuffer[T]()
+  val q = new ListBuffer[T]()
   def push(t: T): T = { q append t; t }
   def pop: T = q remove (q.size - 1)
   def popOption: Option[T] = this removeOption (q.size - 1)
@@ -22,7 +23,13 @@ class ListQueue[T] {
   def size = q.size
 
   def removeOption(i: Int): Option[T] = if (i < q.size) Some(q remove (i)) else None
-  def dropWhile(criteria: T => Boolean) : Unit = q dropWhile (criteria)
+  def remove(criteria: T => Boolean) {
+    var t = q indexWhere criteria
+    while (t > -1) {
+      q remove t
+      t = q indexWhere criteria
+    }
+  }
 }
 
 /** 
@@ -100,9 +107,10 @@ class WQueue(val name: String, val maxSize: Int) extends WRes {
     values.q.clear
   }
 
-  private def debug(msg: String) { 
-    razie.Debug("WQueue: " + this.toString + " - " + msg + " consumers:" + consumers.size + 
-      " values=" + values.size + " producers=" + producers.size) }
+  private def debug(msg: String) {
+    razie.Debug("WQueue: " + this.toString + " - " + msg + " consumers:" + consumers.size +
+      " values=" + values.size + " producers=" + producers.size)
+  }
 }
 
 object ProdCons {

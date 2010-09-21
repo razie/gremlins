@@ -84,7 +84,7 @@ object Wf5Main extends Application {
     println ("")
     println ("Workflow is: " + w.mkString)
     acc += "Running: "
-    println (">>>>>>>> RESULT is " + Engines().exec(w, razie.base.scripting.ScriptFactory.mkContext(), ""))
+    println (">>>>>>>> RESULT is " + (w run ""))
     println (acc)
     println ("=========================================================")
   }

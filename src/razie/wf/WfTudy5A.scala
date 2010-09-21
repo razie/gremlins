@@ -27,7 +27,7 @@ case class vGL5 (ia:GN5, iz:GN5, v:Any) extends GL5 (ia,iz)
 class GN5 (val name : String) extends GNode[GN5, GL5] {
   var nodes : Seq[GN5] = Nil
   var links : Seq[GL5] = Nil
-  override def gnodes = nodes
+//  override def gnodes = nodes
   override def glinks = links
 
    /** reroute */

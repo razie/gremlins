@@ -45,7 +45,6 @@ import razie.wf._
   
 /** match AT MOST one branch */
 class WfMatch1 (val expr : () => Any, e:WfCases1) extends WfActivity {
-  gnodes = Nil
   glinks = e.l.map (new WfLink(this,_))
    
   /** return either branch, depending on cond */
@@ -97,7 +96,6 @@ protected class WfCases1 (val l : List[WfCase1]) extends WfSimple {
 //-------------------------------matchers 2
 
 class WfCase2[T <: Any] (val t : T) (a:WfActivity) extends WfSimple { 
-   gnodes = a :: Nil
    glinks = new WfLink(this,a) :: Nil
    
    def apply(value: Any) : Boolean = value != null && value.isInstanceOf[T] && value == t
@@ -128,7 +126,6 @@ class WfCaseAny2 (a:WfActivity) extends WfCase2(null)(a) {
 }
 
 abstract class WfMatchBase extends WfActivity {
-  gnodes = Nil
   glinks = branches.map (new WfLink(this,_))
   
   val expr : AExpr

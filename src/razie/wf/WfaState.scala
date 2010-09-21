@@ -19,7 +19,7 @@ object ProcState extends Enumeration {
 
 /* processing statuses indicate how the action is progressing */
 object ProcStatus extends Enumeration {
-  val WHATEVER, OK, NOTOK, LATE, STOPPED = Value
+  val WHATEVER, OK, NOTOK, LATE, STOPPED, SKIPPED = Value
 }
 
 case class AuditEvent (val code : String, info:Any*) extends AA (info) 
@@ -47,6 +47,8 @@ trait WfaState extends IsAudited {
     procState = ProcState.withName(e)
     procStatus = ProcStatus.withName(u)
   }
+  
+  val key = razie.g.GRef.uid()
 }
 
 /** I figure even links need state, so here it is... */

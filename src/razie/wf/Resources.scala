@@ -69,7 +69,7 @@ case class WfResReq (res:GRef, what:String, attrs:AC, value:AExpr, var tok : Str
   def req (r: WRes.Req) = 
     AllResources resolve res map (_.req(r))
 //    AllResources resolve res map (_.req(who, token, what, attrs, value(in,v))) 
-  override def toString = toDsl
+  override def toString = toDsl +"("+key+")"
   override def toDsl = "ResReq(" + res.toString+", " + tok + ", "+what+", "+value.toDsl+")"
 }
 
@@ -89,7 +89,7 @@ class WfResReply extends WfActivity with HasDsl with WfResState {
   /** process the reply from the resource. Normally keeps state somewhere as it will be followed by traverse() as the workflow continues */
   def reply (r:WRes.ReqReply) = rreply = Some(r.asInstanceOf[WResRROK])
      
-  override def toString = this.toDsl
+  override def toString = this.toDsl +"("+key+")"
   override def toDsl  = "ResReply"
 }
 

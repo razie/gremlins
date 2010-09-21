@@ -93,7 +93,7 @@ par {
   def testwpar2 = expect (1::2::2::Nil) { razie.M.anyOrder (wpar2.print run 1) }
   def testwpar3 = expect (2::2::Nil) { (wpar3 run 1) }
   def testwpar2s = expect (1::2::2::Nil) { razie.M.anyOrder (wf(wf toDsl wpar2.print) run 1) }
-  def testwpar4 = expect (2::2::Nil) { (wf(wpar4) run 1) }
+  def testwpar4 = expect (2::2::Nil) { (wf(wpar4).print run 1) }
   def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }
 
   // make sure it's actually ran in paralel
@@ -115,6 +115,13 @@ par {
   def testw2 = expect ("m 2") { wm1 run 2 }
   def testw3 = expect ("m Gigi") { wm1 run "Gigi" }
   def testw4 = expect ("m 1,2,3") { wm1.print run List(1,2,3) }
+
+  val inc1 = inc
+  def skip1 = inc + cancel(inc1) + inc1 + inc
+  def testskip = expect (3) { skip1.print run 1 }
+
+  def wt1 = timeout (1000) { sleep(5000) }
+  def testwt1 = expect (true) { razie.Timer { wt1.print run 1 } ._1 < 2000 }
 
   override def setUp () = { Engines.start }
   override def tearDown () = { Engines().stop }

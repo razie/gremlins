@@ -43,7 +43,8 @@ trait GremlinWf {
 
 /** trait shared by gremlins - lifecycle management, basically */
 class GremlinWfImpl extends GremlinWf {
-  def c (defn:String, startV:Any) : GRef = Engines() create (wf(defn), razie.base.scripting.ScriptFactory.mkContext(), startV)
+  def c (defn:String, startV:Any) : GRef = 
+    Engines() create (wf(defn), startV)
   def c (defn:WfActivity, startV:Any) : GRef = null
   def r (id:GRef) : Option[WfActivity] = None
   def r_list () : List[GRef] = List()

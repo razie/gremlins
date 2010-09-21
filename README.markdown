@@ -110,7 +110,10 @@ Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/
 
 
 And, why this workflows library is interesting
-----------------------------------------------
+==============================================
+
+Different views backed by an internal graph presentation
+--------------------------------------------------------
 
 This code 
 
@@ -178,4 +181,22 @@ into a graph, which then executes. This graph can be mapped to a visual represen
 (say using BPEL)
 
 
+Local multithreading
+--------------------
+
+Parallel branches run in a separate threads, so it's true multithreading. The engine has a pool of threads.
+
+
+Timeout
+-------   
+
+Nasty timeout - will interrupt the target thread if it takes too long and skip the respective activity:
+
+    def wt1 = timeout (1000) { 
+      sleep(5000) 
+      }
+      
+    def testwt1 = expect (true) { razie.Timer { wt1.print run 1 } ._1 < 2000 }
+
+    
     

@@ -4,9 +4,8 @@
 
 :server-root "/home/razvanc/bin/ensime_2.8.0-0.2.5/"
 
-:project-package "razie.wf"
+:project-package ""
 
 :use-sbt t
 
 )
-

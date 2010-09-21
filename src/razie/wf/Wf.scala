@@ -9,10 +9,12 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 
 /** 
- * these are the 
+ * these are the final nice wrappers for all the basic activities
+ * 
  * TODO study 5 will settle the underlying workflow engine - there were some details not working in study4,
  * especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
  * up the simplicity of the traversing engine.
+ * 
  * I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect 
  * the graph through its actions...this way there's no change in the engine - it remains simple graph 
  * traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced 
@@ -33,24 +35,26 @@ object wf extends WfBaseLib[WfActivity] {
      case _ => throw new IllegalArgumentException ("x not HasDsl cls="+x.getClass.getName)
   }
 
-//  import razie.wf.res.WTimer
-//  def timeout (time:Long) (f: => WfActivity) : WfActivity = {
-//    val a = WfResReq (WTimer.gref, WTimer.WAIT, AA(), CExpr(time))
-//    val b = seq (
-//      f,  
-//      WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok))
-//      )
-//
-//    par (
-//      a +
-//        new WfResReply() +
-//        cancel (b),
-//      b
-//      )
-//  }
+  import razie.wf.res.WTimer
+  def timeout (time:Long) (f: => WfActivity) : WfActivity = {
+    val x = f
+    val a = WfResReq (WTimer.gref, WTimer.WAITREL, AA(), CExpr(time))
+    par (
+      seq (
+        a,
+        new WfResReply(),
+        cancel (x)
+        ), 
+      seq (
+        x, 
+        WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok)),
+        new WfResReply()
+        )
+      )
+  }
 
-  def cancel (x : WfActivity) : WfActivity = 
-    todo ("cancel a branch in progress")
+  def cancel (target : WfActivity) : WfActivity = WfSkip (target)
+    
    
   //----------------- base activitities
    

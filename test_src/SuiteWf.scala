@@ -23,7 +23,6 @@ class SuiteWf () extends junit.framework.TestSuite(classOf[XNadaWf]) {
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfLibTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.WfBaseTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslSimpleTest]))
-  addTest(new junit.framework.TestSuite(classOf[razie.wf.test.DslStructureTest]))
   addTest(new junit.framework.TestSuite(classOf[razie.wf.test.MoreSamplesTest]))
   
   addTest(new junit.framework.TestSuite(classOf[razie.wf.lib.test.CspTest]))

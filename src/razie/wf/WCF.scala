@@ -157,7 +157,7 @@ par {
     res.map(x => {
        println("Workflow is: " + x.mkString)
        println ("==========================")
-       println (">>>>>>>> RESULT is " + Engines().exec(x, razie.base.scripting.ScriptFactory.mkContext(), ""))
+       println (">>>>>>>> RESULT is " + Engines().exec(x, ""))
     })
     println ("=========================================================")
   }
