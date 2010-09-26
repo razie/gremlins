@@ -53,7 +53,7 @@ Here's how to build it:
 
 -  If you're having problems with out of memory, you have to build each:
 
-    for ff in "razbase 20widgets 20widgets-swing razweb scripster gremlins"
+    for ff in "razxml razbase 20widgets 20widgets-swing razweb scripster gremlins"
     do
       ant -f $f/build.xml clean build jar-only
     done
