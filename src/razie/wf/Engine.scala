@@ -35,16 +35,7 @@ object Audit {
     audit(razie.AA(EV, "ERROR.resNotFound", AC, a, "res", res))
 }
 
-/** 
- * a process thread encapsulates the state of a running workflow branch. You can see this as an 
- * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
- * conceptually these are independent paths of execution, for the PAR/JOIN branches for instance
- */
-class ProcessThread(
-  val parent: Process, val start: WfActivity, val startLink: Option[WfLink],
-  val ctx: AC, val startValue: Any) {
-  // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
-
+class PTState(start: WfActivity, startValue: Any, startLink: Option[WfLink]) {
   var currV: Any = startValue
 
   // the activity in progress
@@ -54,11 +45,22 @@ class ProcessThread(
   var currReq: Option[WRes.Req] = None
 
   // who is processing me right now, if any - if needed to stop stuff
-  var currActor: Option[Worker] = None
+  var currActor: Option[Killeable] = None
 
   // the activities to start on the next step
   var nextAct = start
   var nextLink = startLink
+}
+
+/** 
+ * a process thread encapsulates the state of a running workflow branch. You can see this as an 
+ * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
+ * conceptually these are independent paths of execution, for the PAR/JOIN branches for instance
+ */
+class ProcessThread(
+  val parent: Process, start: WfActivity, startLink: Option[WfLink],
+  val ctx: AC, startValue: Any) extends PTState(start, startValue, startLink) {
+  // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
 
   protected def preProcessing = {
     // TODO keep skipping who's not ready...
@@ -81,7 +83,6 @@ class ProcessThread(
       nextLink map (_.linkState = LinkState.DONE)
       currAct = nextAct
       currAct.procState = ProcState.INPROGRESS
-      
     }
   }
 
@@ -152,7 +153,7 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
   var oldThreads: Seq[ProcessThread] = Nil // don't know why i keep these
 
   def setThreadCount(i: Int) = synchronized { this.countThreads += i }
-  def getThreadCount = this.countThreads 
+  def getThreadCount = this.countThreads
 
   // progress one thread - this would normally happen on its own thread
   def execAndAdvance(t: ProcessThread): Seq[ProcessThread] = {
@@ -161,92 +162,159 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
       if (!t.currAct.isInstanceOf[AndJoin] || n.size <= 0)
         lastV = v
     }
- //   Debug("execAndAdvance() lastV == " + lastV)
+    //   Debug("execAndAdvance() lastV == " + lastV)
     n
   }
 
   // if ran sync, theaads list is relevant . when async, count is relevant
-  def done(): Boolean = synchronized { 
-    val b = /* currThreads.isEmpty || */ countThreads <= 0; 
-//    Debug("done=" + b + " currThreads=" + currThreads.size + " countThreads=" + countThreads); 
-    b 
+  def done(): Boolean = synchronized {
+    val b = /* currThreads.isEmpty || */ countThreads <= 0;
+    //    Debug("done=" + b + " currThreads=" + currThreads.size + " countThreads=" + countThreads); 
+    b
   }
 
   def persist = "" // TODO
   def recover(s: Any) {} // TODO
+
+  /** will suspend execution for further tasks. All sync activities in progress will complete */
+  def suspend {
+
+  }
+
+  /** resume execution of a previously suspended process */
+  def resume {
+
+  }
+}
+
+trait Killeable { def kill() }
+
+trait Doer {
+  def processTick(msg: Any, killeable: Killeable): Unit
 }
 
 /** the engine is more complicated in this case, basically graph traversal */
-class Engine {
+trait EngineStrategy { this: Doer =>
+  /** send new message (work unit) to continue processing */
+  def psend(msg: Any): Unit
+}
+
+trait Threads extends EngineStrategy { this: Doer =>
+  val mtp = new com.razie.pubstage.life.WorkerTP(5)
+
+  def psend(msg: Any) { mtp.put(new Processor(msg)) }
+
+  class Processor(msg: Any) extends com.razie.pubstage.life.Worker(razie.AI("EngineProcessor"),
+    com.razie.pub.base.ExecutionContext.DFLT_CTX) with Killeable {
+    override def process() = processTick (msg, this)
+    override def kill() = mtp kill this
+  }
+}
+
+trait Actors extends EngineStrategy { this: Doer =>
+  import Actor._
+
+  val processors: Array[Actor] = Array.fill(5) {
+    actor {
+      loop {
+        react {
+          case Exit => exit()
+          case msg@_ => processTick (msg, null)
+        }
+      }
+      //    override def kill() = mtp kill this
+    }
+  }
+
+  def psend(msg: Any) { processor ! msg }
+
+  // load balancer
+  val processor: Actor = actor {
+    var i = 0
+    loop {
+      react {
+        case Exit => {
+          processors foreach (_ ! Exit)
+          exit();
+        }
+        case m@_ => {
+          processors(i) ! m;
+          i = (i + 1) % 5
+        }
+      }
+    }
+  }
+}
+
+/** the engine is more complicated in this case, basically graph traversal */
+abstract class Engine extends Doer {
 
   import Actor._
 
   val processes = new scala.collection.mutable.ListBuffer[Process]()
   var stopped = false
 
-  val mtp = new com.razie.pubstage.life.WorkerTP(5)
+  def psend(msg: Any)
 
-  def psend(msg: Any) { mtp.put(new Processor(msg)) }
+  /** process one tick, advancing one execution path along the way - call from either threads or actors */
+  def processTick(msg: Any, killeable: Killeable) = {
+    msg match {
+      // tick is used just to kickstart all threads
+      case Tick(p, a) => {
+        val s = p.currThreads.map(Tack(p, _, a)).toList
+        p setThreadCount s.size
+        s foreach (psend (_))
 
-  class Processor(msg: Any) extends com.razie.pubstage.life.Worker(razie.AI("EngineProcessor"),
-    com.razie.pub.base.ExecutionContext.DFLT_CTX) {
-    override def process() = {
-      msg match {
-        // tick is used just to kickstart all threads
-        case Tick(p, a) => {
-          val s = p.currThreads.map(Tack(p, _, a)).toList
-          p setThreadCount s.size
-          s foreach (psend (_))
+        if (p.done) a ! Done(p) // how to return the value?
+      }
 
-          if (p.done) a ! Done(p) // how to return the value?
+      case Tack(p, t, a) => {
+        t.currActor = Option(killeable) // TODO Option(this)
+        val s = try {
+          p.execAndAdvance(t) // this carries out the actual work...
+        } catch {
+          case s@_ => {
+            Nil
+          }
         }
+        t.currActor = None
 
-        case Tack(p, t, a) => {
-          t.currActor = Option(this) // TODO Option(this)
-          val s = try {
-            p.execAndAdvance(t) // this carries out the actual work...
-          } catch {
-            case s@_ => {
-              Nil
+        // some special activities are handled right here, not in their own traverse()
+        t.currAct match {
+
+          case re: WfResReq => { // make the actual request
+            val cback = new WResUser {
+              override def key = GRef.id("blahblah", "?")
+              def notifyReply(reply: WRes.ReqReply) = psend (Reply(p, t, reply, a))
+              def notifyScrewup(who: WRes) = {
+                psend (Reply(p, t, null, a))
+                throw new UnsupportedOperationException("TODO") // TODO
+              }
+            }
+
+            t.currReq = Some(
+              new WRes.Req(cback, re.tok, re.what, re.attrs, re.value(t.ctx, t.currV)))
+
+            Debug("ENG.Req: " + t.currReq.get)
+            val rep = re.req(t.currReq.get)
+            Debug("ENG.Req returned: " + rep)
+            rep match {
+              case ok@Some(WResRROK(w, tok, r)) => psend (Reply(p, t, ok.get, a))
+              case er@Some(WResRRERR(w, tok, e)) => psend (Reply(p, t, er.get, a))
+              case wa@Some(WResRRWAIT(w, tok)) => ; // current action waits
+              case None => Audit.recResNotFound(re, re.res)
             }
           }
-          t.currActor = None
 
-          // some special activities are handled right here, not in their own traverse()
-          t.currAct match {
+          //              case co: WfStopOthers => { // cancel others
+          //                Debug("ENG.cancelOthers: " + t.currReq.get)
+          //                val s = p.currThreads.filter(_ != t).map(StopThread(p, _, a)).toList
+          //                s foreach (processor ! _)
+          //              }
 
-            case re: WfResReq => { // make the actual request
-              val cback = new WResUser {
-                override def key = GRef.id("blahblah", "?")
-                def notifyReply(reply: WRes.ReqReply) = psend (Reply(p, t, reply, a))
-                def notifyScrewup(who: WRes) = {
-                  psend (Reply(p, t, null, a))
-                  throw new UnsupportedOperationException("TODO") // TODO
-                }
-              }
-
-              t.currReq = Some(
-                new WRes.Req(cback, re.tok, re.what, re.attrs, re.value(t.ctx, t.currV)))
-
-              Debug("ENG.Req: " + t.currReq.get)
-              val rep = re.req(t.currReq.get)
-              Debug("ENG.Req returned: " + rep)
-              rep match {
-                case ok@Some(WResRROK(w, tok, r)) => psend (Reply(p, t, ok.get, a))
-                case er@Some(WResRRERR(w, tok, e)) => psend (Reply(p, t, er.get, a))
-                case wa@Some(WResRRWAIT(w, tok)) => ; // current action waits
-                case None => Audit.recResNotFound(re, re.res)
-              }
-            }
-
-            //              case co: WfStopOthers => { // cancel others
-            //                Debug("ENG.cancelOthers: " + t.currReq.get)
-            //                val s = p.currThreads.filter(_ != t).map(StopThread(p, _, a)).toList
-            //                s foreach (processor ! _)
-            //              }
-
-            // otherwise, it's a normal activity, continue all remaining threads
-            case cact@_ => {
+          // otherwise, it's a normal activity, continue all remaining threads
+          case cact@_ =>
+            {
               cact match {
                 case co: WfSkip => { // cancel a target
                   Debug("ENG.skip")
@@ -258,7 +326,7 @@ class Engine {
               p.synchronized {
                 p setThreadCount (s.size - 1) // TODO really?
                 p.currThreads = p.currThreads.filter (!s.contains(_)) ++ s
-                Debug (">>> new waveline: " + p.currThreads.map(tt=>Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = "+p.getThreadCount)
+                Debug (">>> new waveline: " + p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = " + p.getThreadCount)
                 // TODO err if first action on only thread is REQ then it will finish before reply
                 if (p.done) {
                   Debug("DOOOOOOOOOOOOOOOOOOONE");
@@ -268,61 +336,60 @@ class Engine {
               }
             }
             s map (ptt => psend (Tack(p, ptt, a)))
-          }
-        } // case Tack
+        }
+      } // case Tack
 
-        // reply from resource - continue original thread
-        case Reply(p, t, rr, a) => {
-          Debug("ENG.Reply: " + rr)
-          if (t.done)
-            razie.Warn("WfResReq DUPLICATE - the wfthread is done... " + rr)
-          else t.nextAct match {
-            case re: WfResReply => {
-              t.currReq = None
-              re.reply(rr)
-              psend (Tack(p, t, a))
-            }
-            case s@_ => throw new IllegalStateException("WfResReq MUST be followed by a WfResReply, not a " + s)
+      // reply from resource - continue original thread
+      case Reply(p, t, rr, a) => {
+        Debug("ENG.Reply: " + rr)
+        if (t.done)
+          razie.Warn("WfResReq DUPLICATE - the wfthread is done... " + rr)
+        else t.nextAct match {
+          case re: WfResReply => {
+            t.currReq = None
+            re.reply(rr)
+            psend (Tack(p, t, a))
           }
+          case s@_ => throw new IllegalStateException("WfResReq MUST be followed by a WfResReply, not a " + s)
+        }
+
+        //         if (p.done) a ! Done(p) // how to return the value?
+      }
+
+      case Skip(p, _, a, target) => {
+        Debug("ENG.skipping: " + target)
+        // TODO 2-2 identify target thread only and lock that one
+        target.synchronized {
+          println(">>>>>>>>>>>>>>>>1.killing " + target.procState)
+          target.procState match {
+            case ProcState.DONE => Debug ("--already DONE")
+            // TODO 1-2 find thread and kill it
+            case x@ProcState.INPROGRESS => {
+              target.procStatus = ProcStatus.SKIPPED
+              val tokill = p.currThreads.filter(kk => {
+                println(">>>>>>>>>>>>>>>>2.killing " + kk.currAct.key + "-" + target.key)
+                kk.currAct.key == target.key
+              }).headOption
+              println(">>>>>>>>>>>>>>>>3.killing " + tokill)
+              tokill map (_.currActor map (_.kill()))
+            }
+            case ProcState.CREATED => {
+              target.procState = ProcState.DONE
+              target.procStatus = ProcStatus.SKIPPED
+            }
+            case s@_ => throw new IllegalStateException("todo: for state: " + s)
+          }
+
+          //            t.nextAct match {
+          //             case re: WfResReply =>  // was waiting for reply
+          // TODO should cancel the request with the resource
+          //           }
 
           //         if (p.done) a ! Done(p) // how to return the value?
         }
-
-        case Skip(p, _, a, target) => {
-          Debug("ENG.skipping: " + target)
-          // TODO 2-2 identify target thread only and lock that one
-          target.synchronized {
-println(">>>>>>>>>>>>>>>>1.killing "+target.procState)
-            target.procState match {
-              case ProcState.DONE => Debug ("--already DONE")
-              // TODO 1-2 find thread and kill it
-              case x@ProcState.INPROGRESS => {
-                target.procStatus = ProcStatus.SKIPPED
-                val tokill = p.currThreads.filter(kk => {
-println(">>>>>>>>>>>>>>>>2.killing "+ kk.currAct.key +"-"+ target.key)
-                  kk.currAct.key == target.key
-                }).headOption
-println(">>>>>>>>>>>>>>>>3.killing "+tokill)
-                tokill map (_.currActor map (mtp kill _))
-              }
-              case ProcState.CREATED => {
-                target.procState = ProcState.DONE
-                target.procStatus = ProcStatus.SKIPPED
-              }
-              case s@_ => throw new IllegalStateException("todo: for state: " + s)
-            }
-
-            //            t.nextAct match {
-            //             case re: WfResReply =>  // was waiting for reply
-            // TODO should cancel the request with the resource
-            //           }
-
-            //         if (p.done) a ! Done(p) // how to return the value?
-          }
-        }
-
-        case Exit => //exit()
       }
+
+      case Exit => //exit()
     }
   }
 
@@ -376,15 +443,18 @@ println(">>>>>>>>>>>>>>>>3.killing "+tokill)
     (p, me)
   }
 
+  /** launch a workflow and wait for it to end before returning. AVOID using this method except for tests and demos */
   def exec(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): Any = {
-    // wrap into begin/end
-    import wf._
-
     val t = istart(create(start, startV, ctx), startV, false)
 
     t._2 !? Start(t._1) // just wait, discard reply
 
     t._1.lastV
+  }
+
+  def start(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): Unit = {
+    val t = istart(create(start, startV, ctx), startV, false)
+    t._2 ! Start(t._1) // just start, no wait
   }
 
   /** TODO complete this sync execution - good for debugging or something...right now it's missing async resources */
@@ -420,7 +490,11 @@ println(">>>>>>>>>>>>>>>>3.killing "+tokill)
 object Engines {
   var dflt: Option[Engine] = None
   def stop = synchronized { dflt map (_.stop); dflt = None }
-  def start = synchronized { stop; dflt = Some(new Engine()); dflt.get }
+  def start = synchronized { 
+    stop; 
+    dflt = Some(new Engine with Threads)
+    dflt.get 
+    }
   def apply() = synchronized { val e = (dflt getOrElse start); if (e.stopped) start else e }
 }
 
@@ -473,19 +547,17 @@ case class AndJoin() extends WfActivity with AJState with SpecOps {
 
   def isComplete = prev.size == incoming.size
 
-  override def toString = "AndJoin " + incoming.size + "("+key+")"
+  override def toString = "AndJoin " + incoming.size + "(" + key + ")"
+  //  override def toDsl = throw new UnsupportedOperationException()
 }
 
-/** special engine activity to stop other parallel branches in the same scope */
-case class WfStopOthers() extends WfActivity with HasDsl with SpecOps {
-  override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = (v, glinks)
-  override def toDsl = "stopOthers"
-}
-
-/** special engine activity to skip another */
-case class WfSkip(target: WfActivity) extends WfActivity with HasDsl with SpecOps {
+/** special engine activity to skip another. The function will find the target 
+ * dynamically, starting from me... see the cancel() construct */
+class WfSkip(private val findTarget: WfActivity => WfActivity) extends WfActivity with HasDsl with SpecOps {
+  def target = findTarget(this)
   override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = (v, glinks)
   // TODO 1-1
-  override def toDsl = throw new UnsupportedOperationException("todo")
+  //  override def toDsl = "skip " + target().key
+  override def toDsl = throw new UnsupportedOperationException()
 }
 
