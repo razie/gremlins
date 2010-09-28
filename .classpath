@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry excluding="razie/wf/oldies/" kind="src" path="test_src"/>
+	<classpathentry kind="src" path="src/main/scala"/>
+	<classpathentry kind="src" path="src/test/scala"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/scalatest"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/scalacompiler"/>

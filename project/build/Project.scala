@@ -14,8 +14,5 @@ class PGremlins(info: ProjectInfo) extends DefaultProject(info) {
   override def unmanagedClasspath = 
     (Path.fromFile ("../razbase/lib") / "json.jar") +++
       super.unmanagedClasspath 
- 
-  override def mainScalaSourcePath = "src"
-  override def testScalaSourcePath = "test_src"
 }
 
