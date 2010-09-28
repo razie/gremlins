@@ -43,7 +43,8 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   def print () : WfActivity = { println (this mkString); this}
   
   // simplified execution
-  def run (initialValue : Any) : Any = Engines().exec(this, initialValue)
+  def run   (initialValue : Any) : Any = Engines().exec(this, initialValue)
+  def start (initialValue : Any) : Any = Engines().start(this, initialValue)
 
   implicit val linkFactory : LFactory = (x,y) => new WfLink(x,y) // for the nice inherited --> operators 
 
@@ -57,8 +58,24 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with WfaStat
   
   def <-- (z:WfActivity) : WfActivity =  z --> this
   def <-+ (z:WfActivity) : WfActivity =  z +-> this
+  
+  /** this will bind it to a parent in a DSL construct. Use this very carefully. 
+   * Find usages by seeing who pushes self into WfaCollector */
+  WfaCollector.current.map { _ collect this } 
 }
+
+case class WfaCollector (collect : WfActivity => Unit)
+
+/** if you need to collect children, push yourself here and pop after xscope defined */
+object WfaCollector {
+  val curr = new razie.NoStatic[List[WfaCollector]] ("wfacollector", {List[WfaCollector]()})
  
+  def push (a:WfActivity=> Unit) { curr set WfaCollector(a) :: curr.get }
+  def pop () { curr set curr.get.drop(1) }
+  def current = curr.get.headOption
+  def debug (msg:String) = razie.Debug(">>>>>>>>>"+msg+curr.get)
+}
+
 /** may want to store some color here...or have the link do something */
 class WfLink (val a:WfActivity, val z:WfActivity) extends razie.g.GLink[WfActivity] with WflState 
 

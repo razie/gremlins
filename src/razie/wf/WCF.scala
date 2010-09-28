@@ -27,17 +27,17 @@ trait WCFBase extends WCFExpr {
   def wfa : Parser[WfActivity] = oneormore
   def one : Parser[WfActivity] = wtypes~opt(";") ^^ {case x~o => x}
   
-  def seq : Parser[WfActivity] = "seq"~wset ^^ { case "seq"~l => wf.seq(l:_*) }
-  def par : Parser[WfActivity] = "par"~wset ^^ { case "par"~l => wf.par(l:_*) }
+  def seq : Parser[WfActivity] = "seq"~wset ^^ { case "seq"~l => wf.seq(l) }
+  def par : Parser[WfActivity] = "par"~wset ^^ { case "par"~l => wf.par(l) }
   def scope : Parser[WfActivity] = "scope"~one ^^ { case "scope"~a => wf.scope(a) }
   def label : Parser[WfActivity] = "label"~ident~one ^^ { case "label"~i~a => wf.label(i, a) }
   
-  def oneormore : Parser[WfActivity] = one | wset ^^ { l => wf.seq(l:_*) }
+  def oneormore : Parser[WfActivity] = one | wset ^^ { l => wf.seq(l) }
 
 //  def wmatch : Parser[Any] = "match"~"("~expr~")"~"{"~rep(wcase)~"}"
 //  def wcase : Parser[Any] = "case"~const~"=>"~wfa
 
-  def wfdefn : Parser[WfActivity] = rep(wfa) ^^ { case l => wf.seq(l:_*) }
+  def wfdefn : Parser[WfActivity] = rep(wfa) ^^ { case l => wf.seq(l) }
   
   def wctrl : Parser[WfActivity] = wif | seq | par | scope
  

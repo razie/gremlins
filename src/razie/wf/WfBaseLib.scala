@@ -40,8 +40,8 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
   //------------------- expressions 
   /** the implicit local value */
   def it = new $Expr("0") // haskell interpreter uses 'it' for the last value
-  def $0 = new $Expr("0")
-  def $x = new $Expr("x")
+  def $0 = new $Expr("0") // classic for current value in a range of scripting langs
+  def $x = new $Expr("x") 
   def $y = new $Expr("y")
   /** a value by name from context */
   def $(name: String) = new $Expr(name)
@@ -91,11 +91,16 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
 /** external DSL parsing for the simple library */
 trait WCFBaseLib extends WCFBase {
   //  override def activities () : Parser[WfActivity] = wcfbaselib
-  def wcfbaselib: Parser[WfActivity] = 
-    (wlog | wstopOthers | wnop | winc | wdec | wass | razact | resReq | resReply | resReplyIgnore | assetcmd)
+  def wcfbaselib: Parser[WfActivity] = (
+      wlog | wnop | winc | wdec | wass | razact |  
+      resReq | resReply | resReplyIgnore | assetcmd 
+      )
 
+  // TODO
+//  def gref: Parser[WfActivity] = "gref" ~ "(" ~ expr ~ ")" ^^ { case "gref" ~ "(" ~ e ~ ")" => wf.log(e) }
+//  def wpath: Parser[WfActivity] = "wpath" ~ "(" ~ expr ~ ")" ^^ { case "wpath" ~ "(" ~ e ~ ")" => wf.log(e) }
+  
   def wlog: Parser[WfActivity] = "log" ~ "(" ~ expr ~ ")" ^^ { case "log" ~ "(" ~ e ~ ")" => wf.log(e) }
-  def wstopOthers: Parser[WfActivity] = "stopOthers" ^^ (x => new WfStopOthers())
   def wnop: Parser[WfActivity] = "nop" ^^ (x => wf.nop)
   def winc: Parser[WfActivity] = "inc" ~ opt("(" ~ expr ~ ")") ^^ {
     case "inc" ~ Some("(" ~ e ~ ")") => wf.inc(e)
@@ -107,6 +112,8 @@ trait WCFBaseLib extends WCFBase {
   }
 
   def wass: Parser[WfActivity] = "assign" ~ $expr ~ "=" ~ expr ^^ { case "assign" ~ i ~ "=" ~ e => wf.assign(i.name, e) }
+  
+//  def cancel: Parser[WfActivity] = "skip" ~ gref ^^ { case "skip" ~ n => wf.skip(n) }
 
   def razact: Parser[WfActivity] = "act:" ~ ac ^^ { case "act:" ~ a => wf.act(a) }
   def ac: Parser[TUP] = ident ~ ":" ~ ident ~ opt(acoa) ^^ { case d ~ ":" ~ f ~ sa => (d, f, sa.getOrElse("")) }

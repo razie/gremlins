@@ -83,6 +83,7 @@ trait WfExec extends WFunc[Any] {
 trait WfLibrary[T] { 
   /** wraps an WfExec into a WfActivity...customize this per implementation */
   def wrap (e:WfExec) : T
+  
 }
 
 // TODO need interface for progress, to be implemented by activities that can do stuff that takes time

@@ -52,7 +52,7 @@ class WfBaseTest extends JUnit3Suite {
 
   // ---------------- seq
   
-  def wseq1 = wf.seq(wf.inc, wf.log($0))
+  def wseq1 = wf.seq(List(wf.inc, wf.log($0)))
   def wseq2 = wf.nop + inc + set(5) + inc + wf.log($0)
   def w2s = """seq { nop; inc; log($0) }"""
   def w3s = """seq { seq { nop; inc; log($0) }; seq { nop; inc; log($0) } }"""
@@ -69,38 +69,6 @@ log($0)
   def testw3s = expect (3) { wf(w3s) run 1 }
   def testw1m = expect (2) { wf(w1m) run 1 }
 
-  // ---------------- par
-    
-  def wpar1 = wf.par(log(1), wf.log(2))
-
-  def testwpar1  = expect (1::2::Nil) { razie.M.anyOrder (wpar1.print run 1) }
-
-  def wpar2 = nop | (nop + inc + log($0)) | (inc + log($0))
-  def wpar3 = inc + log($0) | inc + log($0)
-  def wpar4 = """par { seq { inc; log($0) }; seq { inc; log($0) } }"""
-  def wpar5 = """
-par { 
-  seq {
-  	 inc
-  	 log($0)
-  	 } 
-  seq { 
-    inc
-    log($0)
-    }
-  }"""
-
-  def testwpar2 = expect (1::2::2::Nil) { razie.M.anyOrder (wpar2.print run 1) }
-  def testwpar3 = expect (2::2::Nil) { (wpar3 run 1) }
-  def testwpar2s = expect (1::2::2::Nil) { razie.M.anyOrder (wf(wf toDsl wpar2.print) run 1) }
-  def testwpar4 = expect (2::2::Nil) { (wf(wpar4).print run 1) }
-  def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }
-
-  // make sure it's actually ran in paralel
-  def wparp = sleep(1000) | sleep(1000)
-  def testwparp = expect (true) { val i1 = System.currentTimeMillis; wparp.print run 1; System.currentTimeMillis - i1 < 1500 }
-  
-  
   //-------------------------- match/case
   
   def wm1 = wmatch2 ($0) {

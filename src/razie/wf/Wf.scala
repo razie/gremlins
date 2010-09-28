@@ -39,22 +39,36 @@ object wf extends WfBaseLib[WfActivity] {
   def timeout (time:Long) (f: => WfActivity) : WfActivity = {
     val x = f
     val a = WfResReq (WTimer.gref, WTimer.WAITREL, AA(), CExpr(time))
-    par (
-      seq (
-        a,
-        new WfResReply(),
-        cancel (x)
-        ), 
-      seq (
-        x, 
-        WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok)),
+    par {
+      seq {
+        a 
         new WfResReply()
-        )
-      )
+        cancel (x)
+        }
+      seq {
+        x
+        WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok))
+        new WfResReply()
+        }
+      }
+//    par (
+//      seq (
+//        a :: 
+//        new WfResReply() :: 
+//        cancel (x) :: Nil
+//        ) ::
+//      seq (
+//        x ::
+//        WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok)) ::
+//        new WfResReply() :: Nil
+//        ) :: Nil
+//      )
   }
 
-  def cancel (target : WfActivity) : WfActivity = WfSkip (target)
-    
+  def cancel (target : WfActivity) : WfActivity = new WfSkip (x => target)
+//  def cancel (g:Gref) = WfSkip (_.resolve(g))
+//  def cancel (w:WPath) = WfSkip (_.resolve(w))
+  
    
   //----------------- base activitities
    
@@ -98,11 +112,42 @@ object wf extends WfBaseLib[WfActivity] {
 
   // --------------- seq, par
   
-  def seq (a : WfActivity*) : WfActivity = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
+  def seq (a : Seq[WfActivity]) : WfActivity = // optimization - if just one unconnected sub-graph, don't wrap in SEQ
      if (a.size == 1 && a.head.glinks.isEmpty) a.head
      else new WfSeq (a:_*)
     
-  def par (a : WfActivity*) : WfPar = new WfPar (a:_*)
+  def par (a : Seq[WfActivity]) : WfPar = new WfPar (a:_*)
+
+  // this is the funny version
+  def seq (f : => WfActivity) : WfActivity = {
+razie.Debug("--1")
+val lb = new collection.mutable.ListBuffer[WfActivity] 
+       WfaCollector.push { lb append _ }
+       WfaCollector.debug("1")
+      f
+      // construct with the colected
+       WfaCollector.debug("2")
+      WfaCollector.pop()
+       WfaCollector.debug("3")
+razie.Debug("--11")
+      seq (lb)
+     }
+    
+  // this is the funny version
+  def par (f : => WfActivity) : WfPar = {
+razie.Debug("--2")
+      val lb = new collection.mutable.ListBuffer[WfActivity] 
+       WfaCollector.debug("21")
+       WfaCollector.push { lb append _ }
+       WfaCollector.debug("22")
+      f
+      // construct with the colected
+       WfaCollector.debug("23")
+      WfaCollector.pop()
+       WfaCollector.debug("24")
+razie.Debug("--22")
+      par (lb)
+  }
   
   def label (n:String, a : WfActivity) = new WfLabel (n, a)
     
