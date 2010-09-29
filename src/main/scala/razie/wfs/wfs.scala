@@ -15,6 +15,30 @@ import razie.wf.act._
  * 
  * NOTE the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
  * 
+ * Example: 
+{{{
+  val workflow = seq {
+    par {
+      seq {
+      println ("he he - definition time")
+        _ + "runtime-a"
+      }
+      seq {
+        _ + "runtime-b"
+      }
+    }
+    sort[String] (_ < _)
+    later { case x : List[String] => x mkString "," }
+  }
+}}}
+ * 
+ * The body is executed once, like the constructor of a class. only specially marked statements 
+ * become nodes in the workflow...those prefixed by a keyword in this object.
+ * 
+ * The workflow then built can be run at will, once! You can build it again and again wihta def instead of val.
+ * 
+ * As a general rule, each node gets an input value and returns an output value. The "par" will create a list.
+ * 
  * @author razvanc
  */
 object wfs {
