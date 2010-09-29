@@ -65,7 +65,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   WfaCollector.current.map { _ collect this }
 }
 
-case class WfaCollector(collect: WfActivity => Unit)
+case class WfaCollector(who:Any, collect: WfActivity => Unit)
 
 /** if you need to collect children, push yourself here and pop after xscope defined */
 object WfaCollector {
@@ -73,14 +73,15 @@ object WfaCollector {
     override def initialValue() = List[WfaCollector]()
   }
 
-  private[this] def push(a: WfActivity => Unit) { curr set WfaCollector(a) :: currents }
+  private[this] def push(who:Any, a: WfActivity => Unit) { curr set WfaCollector(who, a) :: currents }
   private[this] def pop() { curr.set(currents.drop(1)) }
   def currents = curr.get.asInstanceOf[List[WfaCollector]]
   def current = currents.headOption
+  def who = current map (_.who)
   def debug(msg: String) = razie.Debug(">>>>>>>>>" + msg + curr.get)
 
-  def collect[T](col: WfActivity => Unit)(f: => T): T = {
-    push { col }
+  def collect[T](col: WfActivity => Unit)(who:Any)(f: => T): T = {
+    push (who, col )
     val ret = try {
       f
     } finally {
@@ -89,7 +90,7 @@ object WfaCollector {
     ret
   }
 
-  def noCollect[T](f: => T): T = collect ({ x => {} }) (f)
+  def noCollect[T](f: => T): T = collect ({ x => {} }) (this) (f)
 }
 
 /** may want to store some color here...or have the link do something */

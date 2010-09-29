@@ -295,7 +295,7 @@ class WfDynSeq(a: WfExec) extends WfSeq() {
   
   override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    val out = WfaCollector.collect (lb append _) {
+    val out = WfaCollector.collect (lb append _) (this) {
       a.apply (in, v)
     }
 
@@ -339,7 +339,7 @@ class WfDynSeq(a: WfExec) extends WfSeq() {
 class WfDynPar(a: WfExec) extends WfPar() {
   override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    val out = WfaCollector.collect (lb append _) {
+    val out = WfaCollector.collect (lb append _) (this) {
       a.apply (in, v)
     }
 

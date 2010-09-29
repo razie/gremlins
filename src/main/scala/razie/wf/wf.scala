@@ -124,7 +124,7 @@ object wf extends WfBaseLib[WfActivity] {
   // this is the funny version
   def seq(f: => WfActivity): WfActivity = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    WfaCollector.collect ( lb append _ ) (f)
+    WfaCollector.collect ( lb append _ ) (this) (f)
     // construct with the colected
     seq (lb)
   }
@@ -132,7 +132,7 @@ object wf extends WfBaseLib[WfActivity] {
   // this is the funny version
   def par(f: => WfActivity): WfPar = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    WfaCollector.collect ( lb append _ ) (f)
+    WfaCollector.collect ( lb append _ ) (this) (f)
     // construct with the colected
     par (lb)
   }

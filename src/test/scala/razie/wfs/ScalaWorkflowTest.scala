@@ -143,6 +143,13 @@ class ScalaWorkflowTest extends JUnit3Suite {
   def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
   def testwsp2 = expect ("folded:,1-a,1-b,1-a,1-b") { prun (wsp2, 1) }
 
+  def wfa1 = seq {
+    val a = let! seq { _ + "-a" }
+    later { case _ => a.get + "-b" }
+  }
+  
+  def testwfa1 = expect ("1-a-b") { prun (wfa1, 1) }
+  
   override def setUp() = { razie.wf.Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { razie.wf.Gremlins.die }
 }
