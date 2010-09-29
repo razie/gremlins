@@ -36,7 +36,7 @@ case class AndJoin() extends WfActivity with AJState with SpecOps {
 
   override def traverse(from: Option[WfLink], in: AC, v: Any): (Any, Seq[WfLink]) = this.synchronized {
     addLink(from.get, v) // TODO null should bomb indicating andjoin with no branches in...
-    Debug("AndJoin " + "prev=" + prev.size + " incoming=" + incoming.size)
+    Debug("AndJoin " + " waitingFor=" + incoming.size+ "alreadyHere=" + prev.size )
     if (prev.size == incoming.size) (prev.values.map(x => x).toList, glinks) // I'm done
     else (v, Nil) // current thread dies
   }

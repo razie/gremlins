@@ -376,7 +376,6 @@ class WfFoldLeft[T](zero: T)(plus: (T, T) => T) extends WfSimple with WfExec {
 
 /** scala code with input and return values */
 class WfSort[T](lt: (T, T) => Boolean) extends WfSimple with WfExec {
-  println ("-------------- sort")
   override def apply(in: AC, v: Any): Any = {
     v.asInstanceOf[List[T]].sortWith(lt)
   }

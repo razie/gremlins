@@ -40,13 +40,19 @@ object wfs {
   //----------------- base activitities
 
   // TODO this doesn't work if implicit...see ScaBug1
-  /*implicit*/ def w(f: => Unit) = new WfScala(() => f)
-  def w(f: => Any) = new WfScalaV0(() => f)
-  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
-  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
+  def w(f: => Unit) = new WfScala(() => f)
+  def w(f: Any => Any) = new WfScalaV1((x) => f(x))
+//  def w(f: => Any) = new WfScalaV0(() => f)
+//  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
+//  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
+//  def later(f: => Unit) = new WfScala(() => f)
+//  def later(f: (Any) => Any) = new WfScalaV1((x) => f(x))
+  def later[B](f: PartialFunction[Any,B]) =
+    new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
+  
   def apply(f: => Unit) = w(f)
-  def apply(f: => Any) = w(f)
+  def apply(f: Any => Any) = w(f)
 
 }
 

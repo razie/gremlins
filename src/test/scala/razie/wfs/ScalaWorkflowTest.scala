@@ -9,8 +9,6 @@ import org.scalatest.junit._
 import razie.actionables._
 import razie.actionables.library._
 
-import razie.wf._
-
 class ScalaWorkflowTest extends JUnit3Suite {
   // import the wfs instead of the wf to get the scala workflows
   import wfs._
@@ -56,15 +54,15 @@ class ScalaWorkflowTest extends JUnit3Suite {
     println ("------------------woohoo end")
   }
 
-  def prun(p: WfActivity, s: Any) = { val out = p.print run 1; p.print; out }
+  def prun(p: razie.wf.WfActivity, s: Any) = { val out = p.print run 1; p.print; out }
 
-//  def testwss1 = expect (1) { prun (wss1, 1) }
-//  def testwss2 = expect (1) { prun (wss2, 1) }
+    def testwss1 = expect (1) { prun (wss1, 1) }
+    def testwss2 = expect (1) { prun (wss2, 1) }
   //    def testwss3 = expect (1) { prun (wss3, 1) }
-//  def testwss4 = expect (2) { prun (wss4, 1) }
+    def testwss4 = expect (2) { prun (wss4, 1) }
 
-  //  def testwss8 = expect ("1-a-b") { prun (wss8, 1) }
-  //  def testwss9 = expect (2) { wss9.print run 3 }
+    def testwss8 = expect ("1-a-b") { prun (wss8, 1) }
+    def testwss9 = expect (3) { wss9.print run 1 }
 
   // parallel
   val wsp1 =
@@ -109,10 +107,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
               fapp("a") _
             }
             seq {
-             fapp("b") _
+              fapp("b") _
             }
           }
           sort[String] (_ < _)
+          later { case x : List[String] => x mkString "," }
         }
         seq {
           par {
@@ -124,13 +123,17 @@ class ScalaWorkflowTest extends JUnit3Suite {
             }
           }
           sort[String] (_ < _)
+          later {
+            case l: List[String] => l mkString ","
+          }
         }
       }
+      foldLeft[String] ("folded:") (_ + "," + _)
     }
 
-//    def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
-  def testwsp2 = expect (List(List("1-a", "1-b"), List("1-a", "1-b"))) { prun (wsp2, 1) }
+      def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
+  def testwsp2 = expect ("folded:,1-a,1-b,1-a,1-b") { prun (wsp2, 1) }
 
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+  override def setUp() = { razie.wf.Gremlins.live }
+  override def tearDown() = { razie.wf.Gremlins.die }
 }

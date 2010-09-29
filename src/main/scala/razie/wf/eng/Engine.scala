@@ -166,7 +166,7 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
       if (!t.currAct.isInstanceOf[AndJoin] || n.size <= 0)
         lastV = v
     }
-    //   Debug("execAndAdvance() lastV == " + lastV)
+       Debug("execAndAdvance() lastV == " + lastV)
     n
   }
 

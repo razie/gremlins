@@ -69,14 +69,17 @@ case class WfaCollector(collect: WfActivity => Unit)
 
 /** if you need to collect children, push yourself here and pop after xscope defined */
 object WfaCollector {
-  val curr = new razie.NoStatic[List[WfaCollector]]("wfacollector", { List[WfaCollector]() })
+  val curr = new java.lang.ThreadLocal[List[WfaCollector]] {
+    override def initialValue() = List[WfaCollector]()
+  }
 
-  private[this] def push(a: WfActivity => Unit) { curr set WfaCollector(a) :: curr.get }
-  private[this] def pop() { curr set curr.get.drop(1) }
-  def current = curr.get.headOption
+  private[this] def push(a: WfActivity => Unit) { curr set WfaCollector(a) :: currents }
+  private[this] def pop() { curr.set(currents.drop(1)) }
+  def currents = curr.get.asInstanceOf[List[WfaCollector]]
+  def current = currents.headOption
   def debug(msg: String) = razie.Debug(">>>>>>>>>" + msg + curr.get)
 
-  def collect[T](col: WfActivity => Unit)(f: => T) : T = {
+  def collect[T](col: WfActivity => Unit)(f: => T): T = {
     push { col }
     val ret = try {
       f
@@ -86,7 +89,7 @@ object WfaCollector {
     ret
   }
 
-  def noCollect[T](f: => T) : T = collect ({x=>{}}) (f)
+  def noCollect[T](f: => T): T = collect ({ x => {} }) (f)
 }
 
 /** may want to store some color here...or have the link do something */
