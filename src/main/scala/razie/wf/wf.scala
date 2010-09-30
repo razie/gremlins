@@ -55,19 +55,13 @@ object wf extends WfBaseLib[WfActivity] {
         new WfResReply()
       }
     }
-    //    par (
-    //      seq (
-    //        a :: 
-    //        new WfResReply() :: 
-    //        cancel (x) :: Nil
-    //        ) ::
-    //      seq (
-    //        x ::
-    //        WfResReq (WTimer.gref, WTimer.CANCEL, AA(), CExpr(a.tok)) ::
-    //        new WfResReply() :: Nil
-    //        ) :: Nil
-    //      )
   }
+
+  def sleepAsync(time: Long): WfActivity =
+    seq {
+      WfResReq (WTimer.gref, WTimer.WAITREL, AA(), CExpr(time))
+      new WfResReply()
+    }
 
   def cancel(target: WfActivity): WfActivity = new eng.WfSkip(x => target)
   //  def cancel (g:Gref) = WfSkip (_.resolve(g))
@@ -124,7 +118,7 @@ object wf extends WfBaseLib[WfActivity] {
   // this is the funny version
   def seq(f: => WfActivity): WfActivity = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    WfaCollector.collect ( lb append _ ) (this) (f)
+    WfaCollector.collect (lb append _) (this) (f)
     // construct with the colected
     seq (lb)
   }
@@ -132,7 +126,7 @@ object wf extends WfBaseLib[WfActivity] {
   // this is the funny version
   def par(f: => WfActivity): WfPar = {
     val lb = new collection.mutable.ListBuffer[WfActivity]
-    WfaCollector.collect ( lb append _ ) (this) (f)
+    WfaCollector.collect (lb append _) (this) (f)
     // construct with the colected
     par (lb)
   }

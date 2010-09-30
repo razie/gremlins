@@ -304,7 +304,7 @@ class WfDynSeq(a: WfExec) extends WfSeq() {
     razie.Debug ("Collected: " + lb)
     
     if (lb.size > 0) {
-      razie.Debug ("Old dynamic sub-graph... follows:"); this.print
+      razie.Debug ("Old dynamic sub-graph... follows:"+this.mkString);
 
       val newseq = WfaCollector.noCollect { 
         new WfSeq(lb: _*) 
@@ -314,7 +314,7 @@ class WfDynSeq(a: WfExec) extends WfSeq() {
       glinks.headOption.map (newseq --| _.z)
       val newglinks = List(new WfLink(lastAct, newseq))
       lastAct.glinks = newglinks
-      razie.Debug ("New dynamic sub-graph... follows:"); this.print
+      razie.Debug ("New dynamic sub-graph... follows:"+this.mkString)
       
       (out, newglinks)
     } else
@@ -347,7 +347,7 @@ class WfDynPar(a: WfExec) extends WfPar() {
     //lb map (this + _)
     razie.Debug ("Collected: " + lb)
     if (lb.size > 0) {
-      razie.Debug ("Old dynamic sub-graph... follows:"); this.print
+      razie.Debug ("Old dynamic sub-graph... follows:"+this.mkString)
       //decouple AJ from me
       aj.incoming = Nil
       glinks = Nil
@@ -359,7 +359,7 @@ class WfDynPar(a: WfExec) extends WfPar() {
         a.glinks.headOption.map(_.z.key == aj.key).getOrElse(false)
       }) foreach (n => aj addIncoming n.glinks.head)
 
-      razie.Debug ("New dynamic sub-graph... follows:"); this.print
+      razie.Debug ("New dynamic sub-graph... follows:"+this.mkString)
       (out, glinks)
     } else
       (out, glinks)

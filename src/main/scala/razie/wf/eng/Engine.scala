@@ -204,7 +204,7 @@ trait EngineStrategy { this: Doer =>
 }
 
 trait Threads extends EngineStrategy { this: Doer =>
-  val mtp = new com.razie.pubstage.life.WorkerTP(5)
+  val mtp = new com.razie.pubstage.life.WorkerTP(10)
 
   def psend(msg: Any) { mtp.put(new Processor(msg)) }
 
@@ -218,7 +218,7 @@ trait Threads extends EngineStrategy { this: Doer =>
 trait Actors extends EngineStrategy { this: Doer =>
   import Actor._
 
-  val processors: Array[Actor] = Array.fill(5) {
+  val processors: Array[Actor] = Array.fill(10) {
     actor {
       loop {
         react {
@@ -489,7 +489,7 @@ abstract class Engine extends Doer {
 
   def stop = synchronized {
     if (!processes.isEmpty)
-      throw new IllegalStateException("there are still Processes in progress")
+      throw new IllegalStateException("there are still " + processes.size + " Processes in progress")
 
     stopped = true
     psend (Exit)

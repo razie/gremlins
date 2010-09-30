@@ -143,6 +143,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
   def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
   def testwsp2 = expect ("folded:,1-a,1-b,1-a,1-b") { prun (wsp2, 1) }
 
+  // just a DSL example of simulating the let! from F#
   def wfa1 = seq {
     val a = let! seq { _ + "-a" }
     later { case _ => a.get + "-b" }
