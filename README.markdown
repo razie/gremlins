@@ -205,6 +205,8 @@ Scala workflows
 Due to popular demand, I created a "wfs" version to just run scala code in parallel.
 
 Lazy Example: 
+-------------
+
     import razie.wfs._
     val workflow = seq {    
       par {      
@@ -221,6 +223,7 @@ Lazy Example:
 The body of the different nodes are executed as the nodes are run!
 
 Strict Example: 
+---------------
 
     import razie.wfs._
     val workflow = wfs strict seq {    
@@ -235,7 +238,19 @@ Strict Example:
        later { case x : List[String] => x mkString "," }  
        }
 
+Simulating the let! (let bang) from F#
+--------------------------------------
 
+F# has introduced the so-called "asynchronous workflows". What that really is
+is a simple lazy invocation of parts of bodies of functions. Here's a simulation
+of the let! syntax and the overall behavior, as a scala DSL:
 
-    
-    
+    def wfa1 = seq {
+      val a = let! async { _ + "-a" }
+      later { case _ => a.get + "-b" }
+    }
+
+Follow this approach to assign named variables to intermediary results.
+
+Next stop: the asynchronous monad...for another day!
+
