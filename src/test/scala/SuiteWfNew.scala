@@ -9,7 +9,7 @@ import org.scalatest.SuperSuite
 /** main test suite */
 class SuiteWfNew extends SuperSuite (
   List (
-    new razie.wf.WfLibTest
+    new razie.gremlins.WfLibTest
   )
 )
 

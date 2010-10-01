@@ -27,7 +27,7 @@ object Actionables {
    }
 
    /** make an executable */
-   def make(name:String, ai:ActionItem, in:AttrAccess, ex:razie.wf.JWFunc) : Actionable = {
+   def make(name:String, ai:ActionItem, in:AttrAccess, ex:razie.gremlins.JWFunc) : Actionable = {
       new Actionable (name, ai, in, ex);
    }
  

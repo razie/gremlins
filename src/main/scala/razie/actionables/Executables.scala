@@ -32,7 +32,7 @@ object Executables {
    * @param unifiedstring
    * @return
    */
-  def make(unifiedstring: String): razie.wf.JWFunc = {
+  def make(unifiedstring: String): razie.gremlins.JWFunc = {
     val pat(domain, cmd, parens, args) = unifiedstring
 
     factories.get(domain) match {
@@ -64,7 +64,7 @@ trait ExecutableFactory {
    * @param unifiedstring
    * @return
    */
-  def make(unifiedstring: String): razie.wf.JWFunc
+  def make(unifiedstring: String): razie.gremlins.JWFunc
 
   /** return the list of commands available in this factory */
   def commands(): Array[razie.AI]

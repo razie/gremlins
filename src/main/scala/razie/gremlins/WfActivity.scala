@@ -3,11 +3,13 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.gremlins
 
 import razie.AA
 import razie.base.{ ActionContext => AC }
 import razie.g._
+import razie.{wf, gremlins}
+import razie.Gremlins
 
 /** 
  * This is the basic node in the graph: an activity waiting to be traversed/executed. 
@@ -36,8 +38,8 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   override def toString: String = this.getClass().getSimpleName + "(" + key + ")"
 
   // syntax niceties 
-  def +(e: WfActivity): WfActivity = new act.WfSeq(this, e)
-  def |(e: WfActivity): WfActivity = new act.WfPar(this, e)
+  def +(e: WfActivity): WfActivity = new gremlins.act.WfSeq(this, e)
+  def |(e: WfActivity): WfActivity = new gremlins.act.WfPar(this, e)
   //  def | (e:Seq[WfActivity]) : WfActivity = WfPar ((this :: e.toList):_*)
 
   def print(): WfActivity = { println (this mkString); this }
@@ -72,6 +74,9 @@ object WfaCollector {
   val curr = new java.lang.ThreadLocal[List[WfaCollector]] {
     override def initialValue() = List[WfaCollector]()
   }
+  val flags = new java.lang.ThreadLocal[collection.mutable.Map[String,Boolean]] {
+    override def initialValue() = collection.mutable.HashMap[String,Boolean]()
+  }
 
   private[this] def push(who:Any, a: WfActivity => Unit) { curr set WfaCollector(who, a) :: currents }
   private[this] def pop() { curr.set(currents.drop(1)) }
@@ -91,6 +96,11 @@ object WfaCollector {
   }
 
   def noCollect[T](f: => T): T = collect ({ x => {} }) (this) (f)
+  def flagged[T] (name:String) (f: => T): T = collect ({ x => {} }) (name) (f)
+  def isFlag (name:String) : Option[Boolean] = currents.find(_.who match { 
+    case s:String if (s==name) => true
+    case _ => false
+    }).map (_ => true)
 }
 
 /** may want to store some color here...or have the link do something */

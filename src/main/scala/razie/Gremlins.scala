@@ -1,12 +1,12 @@
-package razie.wf
+package razie
 
-import razie.wf.eng._
+import razie.gremlins.eng._
 
 object Gremlins {
   var dflt: Option[Engine] = None
 
   /** cause all gremlins to die */
-  def die = synchronized { dflt map (_.stop); dflt = None }
+  def die = synchronized { dflt map (_.stop()); dflt = None }
   
   /** allow gremlins to live in a default engine */
   def live : Engine = liveInside (new Engine with Threads)

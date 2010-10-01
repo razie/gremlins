@@ -14,7 +14,7 @@ import com.razie.pub.base.log.Log;
  * 
  * @author razvanc
  */
-class ExecLog extends razie.wf.JWFunc {
+class ExecLog extends razie.gremlins.JWFunc {
 
 	def spec : ActionableSpec = new ActionableSpec(
 			razie.AA("msg=missing"), razie.AA("result"));

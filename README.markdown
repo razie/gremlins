@@ -198,5 +198,44 @@ Nasty timeout - will interrupt the target thread if it takes too long and skip t
       
     def testwt1 = expect (true) { razie.Timer { wt1.print run 1 } ._1 < 2000 }
 
+
+Scala workflows
+===============
+
+Due to popular demand, I created a "wfs" version to just run scala code in parallel.
+
+Lazy Example: 
+    import razie.wfs._
+    val workflow = seq {    
+      par {      
+        seq {      
+          println ("he he - definition time")
+          async { _ + "runtime-a" }
+          }
+        async { _ + "runtime-b" }
+        }
+        sort[String] (_ < _)
+       later { case x : List[String] => x mkString "," }  
+       }
+
+The body of the different nodes are executed as the nodes are run!
+
+Strict Example: 
+
+    import razie.wfs._
+    val workflow = wfs strict seq {    
+      par {      
+        seq {      
+          println ("he he - definition time")
+          async { _ + "runtime-a" }
+          }
+        async { _ + "runtime-b" }
+        }
+        sort[String] (_ < _)
+       later { case x : List[String] => x mkString "," }  
+       }
+
+
+
     
     

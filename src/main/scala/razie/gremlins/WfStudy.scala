@@ -3,17 +3,17 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.gremlins
 
 import razie.AA
 import razie.base.{ActionContext => AC}
-import razie.wf.lib._
-import razie.wfs._
+import razie.gremlins.lib._
+import razie.wft
 
 //--------------------- samples
 
 object Wf5Main extends Application {
-   import wf._
+   import razie.wf._
 
    var acc = ""
 

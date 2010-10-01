@@ -10,7 +10,7 @@ import razie.actionables.THasActionables
 import razie.base._
 
 /** simple executable wrapping a simple scala functional - use it to overload stuff in code*/
-class FunExec (val fun : (ActionContext)=>AnyRef) extends razie.wf.JWFunc{
+class FunExec (val fun : (ActionContext)=>AnyRef) extends razie.gremlins.JWFunc{
 	override def apply(in:ActionContext, v:Any):Any = {
 	  fun (in)
 	}

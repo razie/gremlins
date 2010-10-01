@@ -3,12 +3,12 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.gremlins
 
 import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.g._
-import razie.wf.act._
+import razie.gremlins.act._
 
 /** a resource. Resources implement asynchronicity
  * 

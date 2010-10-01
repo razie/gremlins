@@ -25,7 +25,7 @@ import com.razie.pub.comms.Comms;
  * 
  * @author razvanc
  */
-class ExecTelnet extends razie.wf.JWFunc {
+class ExecTelnet extends razie.gremlins.JWFunc {
 
 	def spec = new ActionableSpec(new AttrAccessImpl(
 			"host=localhost,port=21,cmd"), new AttrAccessImpl("result"));

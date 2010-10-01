@@ -10,7 +10,7 @@ import razie.actionables.THasActionables
 import razie.base._
 
 /** good for testing: concat all arguments SORTED by name and return result */
-class ExecAdd () extends razie.wf.JWFunc {
+class ExecAdd () extends razie.gremlins.JWFunc {
   import scala.collection.JavaConversions._
 
   override def apply(in:ActionContext, v:Any):Any = {

@@ -15,7 +15,7 @@ import java.awt.Robot;
 import java.awt.event.KeyEvent;
 
 /** play a key */
-class ExecPlaykey () extends razie.wf.JWFunc {
+class ExecPlaykey () extends razie.gremlins.JWFunc {
 	def spec = new ActionableSpec(razie.AA("key=A,ctrl=no,shift=no"), razie.AA("result"));
 
    override def apply(in:ActionContext, v:Any):Any = {

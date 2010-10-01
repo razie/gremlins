@@ -3,13 +3,13 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie.gremlins
 
 import scala.util.parsing.combinator._
 import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.base.scripting._
-import razie.wf.lib._
+import razie.gremlins.lib._
 
 /** an expression */
 abstract class Expr[T <: Any] (val expr : String) extends WFunc[T] with HasDsl {

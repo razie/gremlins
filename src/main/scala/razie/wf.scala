@@ -3,12 +3,12 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.wf
+package razie
 
-import razie.AA
 import razie.base.{ ActionContext => AC }
-import razie.wf.lib._
-import razie.wf.act._
+import razie.gremlins._
+import razie.gremlins.lib._
+import razie.gremlins.act._
 
 /** 
  * these are the final nice wrappers for all the basic activities
@@ -39,7 +39,7 @@ object wf extends WfBaseLib[WfActivity] {
     case _ => throw new IllegalArgumentException("x not HasDsl cls=" + x.getClass.getName)
   }
 
-  import razie.wf.res.WTimer
+  import razie.gremlins.res.WTimer
   def timeout(time: Long)(f: => WfActivity): WfActivity = {
     val x = f
     val a = WfResReq (WTimer.gref, WTimer.WAITREL, AA(), CExpr(time))

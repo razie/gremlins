@@ -15,7 +15,7 @@ import java.awt.event.KeyEvent;
 import razie.actionables.util.WinExec
 
 /** run a command line - windows and unix */
-class ExecCmdline (wait:Boolean = false) extends razie.wf.JWFunc {
+class ExecCmdline (wait:Boolean = false) extends razie.gremlins.JWFunc {
 	def spec = new ActionableSpec(razie.AA("cmd=uname -A"), razie.AA("result"));
 
     override def apply(in:ActionContext, v:Any):Any = {

@@ -24,7 +24,7 @@ class Actionable (
       val name:String, 
       val item:ActionItem, 
       val inArgs:AttrAccess, 
-      val executable:razie.wf.JWFunc) {
+      val executable:razie.gremlins.JWFunc) {
    
 	def execute () : Any = {
 		this.executable.apply(inArgs, null);

@@ -18,7 +18,7 @@ object RazbaseExecutables extends ExecutableFactory {
     * @param unifiedstring
     * @return
     */
-   override def make(unifiedstring:String) : razie.wf.JWFunc = {
+   override def make(unifiedstring:String) : razie.gremlins.JWFunc = {
      val Executables.pat(domain, cmd, parens, args) = unifiedstring
      
      require (cmds contains cmd, "need to support command: "+cmd) 
