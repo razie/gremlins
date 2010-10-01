@@ -13,7 +13,7 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
   import wfs._
   import razie.wf.wf
 
-  val noflows = 10000
+  val noflows = 1000
   val delay = 100
 
   class Counter(val ceiling: Int) {
