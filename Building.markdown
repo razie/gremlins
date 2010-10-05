@@ -26,6 +26,12 @@ Here's how to build it:
     git clone git@github.com:razie/scripster.git
     git clone git@github.com:razie/gremlins.git
 
+Note: if you don't have a github ssh key setup, use the anonymous checkout:
+
+    git clone http://github.com/razie/razbase.git
+    git clone http://github.com/razie/scripster.git
+    git clone http://github.com/razie/gremlins.git
+
 3.1. for 20widgets, hack a bit - have to checkout my fork of CodeMirror in this specific location
 
     cd ${w}/razbase/20widgets/src/resources/public
