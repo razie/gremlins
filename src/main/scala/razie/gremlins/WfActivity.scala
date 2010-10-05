@@ -96,6 +96,9 @@ object WfaCollector {
   }
 
   def noCollect[T](f: => T): T = collect ({ x => {} }) (this) (f)
+  def cantCollect[T](block:String) (f: => T): T = collect ({ x => {
+    throw new IllegalStateException ("CAN'T define new activities in this block: " + block + " !!!")
+    } }) (this) (f)
   def flagged[T] (name:String) (f: => T): T = collect ({ x => {} }) (name) (f)
   def isFlag (name:String) : Option[Boolean] = currents.find(_.who match { 
     case s:String if (s==name) => true
