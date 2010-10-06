@@ -20,6 +20,8 @@ class LoopTest extends JUnit3Suite {
   import razie.wfs
   import razie.wfs._
 
+  razie.g.Graphs.maxDebugDepth = 50
+ 
   def fapp(app: String)(in: Any): Any = {
     val x = in.toString + "-" + app;
     println ("------------- woohoo " + x);
@@ -45,20 +47,40 @@ class LoopTest extends JUnit3Suite {
         sync { fapp("b") _ }
       }
     }
-//  def testwif1  = expect ("1-a-b") { prun (wif1, 1) }
-//  def testwif1s = expect ("1-a-b") { prun (wfs strict wif1, 1) }
+  def testwif1  = expect ("1-a-b") { prun (wif1, 1) }
+  def testwif1s = expect ("1-a-b") { prun (wfs strict wif1, 1) }
+
+  // foreach loop
+  def wforeach1 =
+    seq {
+      var x = 0 // bad - var in scala, no state captured in the workflow
+      wforeach {
+        later { case i:Int => x += i }
+      }
+      w { _ => x } // another way to assign x to the default value
+    }
+    def testwforeach1 = expect (6) { prun (wforeach1, List(1,2,3)) }
+    def testwforeach1s = expect (6) { prun (wfs strict wforeach1, List(1,2,3)) }
+
+  // parallel map
+  def wsmap1 =
+    seq {
+      wsmap[Int,Int] (3) { x:Int => x + 1 }
+    }
+    def testwsmap1 = expect (List(2,3,4)) { prun (wsmap1, List(1,2,3)) }
+    def testwsmap1s = expect (List(2,3,4)) { prun (wfs strict wsmap1, List(1,2,3)) }
 
   // simplest loop
-  def wloop1 =
-    seq {
-      println ("------------------woohoo start")
-      wforeach {
-        println ("------------------woohoo build a")
-        w { fapp("a") _ }
-      }
-    }
+//  def wmap1 =
+//    seq {
+//      var x = 0 // bad - var in scala, no state captured in the workflow
+//      wmap {
+//        later { case i:Int => i+1 ; case s@_ => razie.Log ("unexpected value: " + s)}
+//      }
+//      w { _ => x } // another way to assign x to the default value
+//    }
 //    def testwloop1 = expect ("1-a-a-a") { prun (wloop1, List(1,2,3)) }
-    def testwloop1s = expect ("1-a-a-a") { prun (wfs strict wloop1, List(1,2,3)) }
+//    def testwmap1s = expect (List(2,3,4)) { prun (wfs strict wmap1, List(1,2,3)) }
 
   // multilevel - workflow built and then ran: 
   // the fapp is now invoked as a separate activity and others may cut in - note the sequence of messages is likely different
@@ -78,19 +100,17 @@ class LoopTest extends JUnit3Suite {
     }
   //  def testwsp4 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp4, 1) }
 
-  // just a DSL example of simulating the let! from F#
-  def wfa1 = seq {
-    val a = let ! sync { _ + "-a" }
-    later { case _ => a.get + "-b" }
-  }
-
   override def setUp() = { razie.Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { razie.Gremlins.die }
 
   // simplify running the workflow
   def prun(p: razie.gremlins.WfActivity, s: Any) = {
-    val out = p.print run 1;
+    val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
+    val out = razie.Gremlins().exec (p.print, s)
+    println ("============= RESULTS ===============")
     p.print;
+    println ("context: " + ctx)
+    println ("value: " + out)
     out
   }
 

@@ -76,7 +76,7 @@ trait sertodo /*extends GReferenceable*/ extends HasDsl {
 
 /** bridge the WFunc to the WfActivity */
 trait WfExec extends WFunc[Any] {
-  def wname : String = "?"
+  def wname : String = this.getClass.getSimpleName
 }
 
 /** libraries of executables should have this trait. You can have lib[WfActivity] or lib[WfExec] or whatever */

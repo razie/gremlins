@@ -119,35 +119,20 @@ class wfs {
     def !(f: => WfActivity) = wfs.let (name) (f)
   }
 
-  def let = new LetBang(razie.g.GRef.uid)
+  def let = new LetBang("var-" + razie.g.GRef.uid)
 
-  def let(name: String)(f: => WfActivity) = {
+  def ilet(name: String)(f: => WfActivity) = {
     // this is collected...but not in a par
     if (WfaCollector.who.map(_.isInstanceOf[WfPar]).getOrElse(false))
       throw new IllegalStateException("You can't use a let in a par{} block")
     val v = new LetBangVar(name)
-    wf seq noCollect {
+    (wf seq noCollect {
       Seq(f, wf.wrap(new LetBangVarAssign(v)))
-    }
-    v
+    },
+      v)
   }
 
-  /** collects the current value of the workflow */
-  class LetBangVarAssign(l: LetBangVar) extends WfExec {
-    override def apply(in: AC, prevValue: Any) = {
-      l set Option(prevValue)
-    }
-  }
-
-  /** collects the current value of the workflow */
-  class LetBangVar(name: String) {
-    var v: Option[Any] = None
-    def set(o: Option[Any]) { v = o }
-    def apply() = v.get
-    def get = v.get
-    def opt = v
-    override def toString = v.toString
-  }
+  def let(name: String)(f: => WfActivity) = ilet (name) (f)._2
 
   //----------------- if
 
@@ -161,25 +146,131 @@ class wfs {
   def wif(cond: Cond1)(f: => Unit) = new WfDynIf(wc1(cond), f)
 
   //----------------------- list stuff
+
+  def map[A, B](f: A => B) = new WfMap[A, B](f)
+  def imap[A, B](a: Int, b: Int)(f: A => B) = new WfSliceMap[A, B](new WfeScalaV1(x => (a, b)))(f)
+
   def foldLeft[T](zero: T)(plus: (T, T) => T) = new WfFoldLeft[T](zero)(plus)
   def groupBy[T, K](g: T => K) = new WfGroupBy[T, K](g)
   def sort[T](lt: (T, T) => Boolean) = new WfSort[T](lt)
 
   implicit val linkFactory = (x, y) => new razie.gremlins.WfLink(x, y)
 
-  def wforeach[T](f: => WfActivity) = wf seq noCollect {
-    val v = wfs.let (razie.g.GRef.uid) (new WfScalaV0(() => 0))
-    val head = wf.label ("start", wf.nop)
-    val end = wf.label ("end", wf.nop)
-    end --> head
-    val i = new WfDynIf (
-        wc1(x => {v.get.asInstanceOf[Int] <= wf.$0.asInstanceOf[List[T]].size}), 
-        f) welse end
-
-    Seq(head, i, end)
+  class LString(name: String) {
+    //    def label (f: => WfActivity) = wf.label(name, f)
+    def label(f: => WfActivity) = new WfLabelInsert(name) --> f
   }
-  
-  val end = wf.label ("end", wf.nop)
+  implicit def toLString(label: String) = new LString(label)
+
+  //  def wforeach[T](f: => WfActivity) = wf seq noCollect {
+  def wforeach[T](f: => WfActivity) = "wforeach" label noCollect {
+    val (vorigA, vorig) = wfs.ilet ("var-" + razie.g.GRef.uid) (wf.nop)
+    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => 0))
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val body = wf seq Seq (
+      // swap list with current element
+      "swapElement" label w { x => vorig.get.asInstanceOf[List[T]] (v.get.asInstanceOf[Int]) },
+      f,
+      "next" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
+      wf.wrap(new LetBangVarAssign(v)),
+      "restore" label w { x => vorig.get } // restore the list
+)
+    body --> loop
+    val i = wfs strict { new WfDynIfa(
+      wc1(x => { v.get.asInstanceOf[Int] < vorig.get.asInstanceOf[List[T]].size }),
+      body) welse done }
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+    //    Seq(va, va1, head, i)
+    vorigA --| va --| (head --> i)
+  }
+
+  def wsmap[A, B](branches: Int)(f: A => B) = "wsmap" label noCollect {
+    val p = seq {
+      par {
+        for (i <- 0 until branches)
+          new WfSliceMap[A, B](new WfeScalaV1(x => {
+            val s = x.asInstanceOf[List[A]].size
+            val step = s / branches
+            val max = s / branches
+            (i * step, min ((i + 1) * step, s))
+          }))(f)
+      }
+      // sort the lists
+      w { x => {
+        val v = x.asInstanceOf[List[(Int, List[B])]]
+        val r = v.sortWith ((a,b) => a._1 < b._1)
+        r map (_._2)
+      }}
+      new WfFlatten[B]
+    }
+    p
+  }
+
+  private def min(a: Int, b: Int): Int = if (a < b) a else b
+
+  //  simple map branch
+  def wimap[T](f: => WfActivity) = "wsimap" label noCollect {
+    val (vorigA, vorig) = wfs.ilet ("var-" + razie.g.GRef.uid) (wf.nop)
+    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => 0))
+    val (vac, vc) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => List()))
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val body = wf seq Seq (
+      // swap list with current element
+      "swapElement" label w { x => vorig.get.asInstanceOf[List[T]] (v.get.asInstanceOf[Int]) },
+      f,
+      "collect" label w { x => x :: vc.get.asInstanceOf[List[T]] },
+      wf.wrap(new LetBangVarAssign(vc)),
+      "next" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
+      wf.wrap(new LetBangVarAssign(v)),
+      "restore" label w { x => vorig.get } // restore the list
+)
+    body --> loop
+    val i = new WfDynIfa(
+      wc1(x => { v.get.asInstanceOf[Int] < vorig.get.asInstanceOf[List[T]].size }),
+      body) welse done
+
+    val result = "result" label w { x => vc.get }
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+    //    Seq(va, va1, head, i)
+    vorigA --| va --| vac --| (head --> i) // --| result
+  }
+
+  def wmap[T](branches: Int)(f: => WfActivity) = "wmap" label noCollect {
+    val (va1, v1) = wfs.ilet ("var-" + razie.g.GRef.uid) (wf.nop)
+    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => 0))
+    val (vac, vc) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => List()))
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val body = wf seq Seq (
+      // swap list with current element
+      "1" label w { x => v1.get.asInstanceOf[List[T]] (v.get.asInstanceOf[Int]) },
+      f,
+      "2" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
+      wf.wrap(new LetBangVarAssign(v)),
+      "3" label w { x => v1.get } // restore the list
+)
+    body --> loop
+    val i = new WfDynIfa(
+      wc1(x => { v.get.asInstanceOf[Int] <= wf.$0.asInstanceOf[List[T]].size }),
+      body) welse done
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+    //    Seq(va, va1, head, i)
+    va1 --| va --| vac --| (head --> i)
+  }
 
   //-----------------------  full workflow loops
   //  def wmap (f: Any => Any): WfActivity = {
@@ -214,6 +305,26 @@ class wfs {
 //  def async (l:List[_])   = new AsyncMonad (l)
 //  for (a <- async (List(1,2,3))) yield a
 //}
+
+/** collects the current value of the workflow */
+class LetBangVarAssign(l: LetBangVar) extends WfExec {
+  override def apply(in: AC, prevValue: Any) = {
+    l set Option(prevValue)
+    // also set it in the context...?
+    in.set (l.name, l)
+    prevValue
+  }
+}
+
+/** collects the current value of the workflow */
+class LetBangVar(val name: String) {
+  var v: Option[Any] = None
+  def set(o: Option[Any]) { v = o }
+  def apply() = v.get
+  def get = v.get
+  def opt = v
+  override def toString = v.toString
+}
 
 object wfs extends wfs
 

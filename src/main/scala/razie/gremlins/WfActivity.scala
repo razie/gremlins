@@ -35,14 +35,16 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def traverse(in: AC, v: Any): (Any, Seq[WfLink])
   def traverse(from: Option[WfLink], in: AC, v: Any): (Any, Seq[WfLink]) = traverse (in, v)
 
-  override def toString: String = this.getClass().getSimpleName + "(" + key + ")"
+  override def toString: String = this.getClass().getSimpleName + " (" + key + ")"
 
   // syntax niceties 
   def +(e: WfActivity): WfActivity = new gremlins.act.WfSeq(this, e)
   def |(e: WfActivity): WfActivity = new gremlins.act.WfPar(this, e)
   //  def | (e:Seq[WfActivity]) : WfActivity = WfPar ((this :: e.toList):_*)
 
-  def print(): WfActivity = { println (this mkString); this }
+  // limit depth for debugging purposes
+  override def mkString = Graphs.entire[WfActivity, WfLink](this).dag.mkString
+  def print(): WfActivity = { println (this.mkString); this }
   def debug(): WfActivity = { wf toDsl this; print }
 
   // simplified execution

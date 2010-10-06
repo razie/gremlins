@@ -70,6 +70,8 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
   // TODO don't rebuild only to parse again
   def act(t: (String, String, String)): T = act(t._1 + ":" + t._2 + "(" + t._3 + ")")
 
+  def stop (pass:Int = 1) = new razie.gremlins.eng.WfStop (pass)
+  
   // TODO
   //  def action (gref:String, action:String) = new WfAssetCmd (action, GRef.fromString(gref), AC(), Map())
 }

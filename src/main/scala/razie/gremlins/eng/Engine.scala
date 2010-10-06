@@ -167,7 +167,7 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
       if (!t.currAct.isInstanceOf[AndJoin] || n.size <= 0)
         lastV = v
     }
-       Debug("execAndAdvance() lastV == " + lastV)
+    Debug("execAndAdvance() lastV == " + lastV)
     n
   }
 
@@ -476,18 +476,18 @@ abstract class Engine extends Doer {
 
   def preProcess(p: Process) {
     // cache z ends to AndJoins
-    razie.g.Graphs.foreach(
-        p.start, (l: WfActivity, v: Int) => {}, 
-        (l: WfLink, v: Int) => l.z match { 
-          case a: AndJoin => a addIncoming l; 
-          case _ => 
-          }
-        )
+    // TODO I use dag which is not the most efficient way to do this
+    razie.g.Graphs.entire[WfActivity, WfLink](p.start).dag.foreach(
+      (n: WfActivity, v: Int) => {},
+      (l: WfLink, v: Int) => l.z match {
+        case a: AndJoin => a addIncoming l;
+        case _ =>
+      })
   }
 
   def checkpoint() {}
 
-  def stop (timeout:Int = 250) = synchronized {
+  def stop(timeout: Int = 250) = synchronized {
     if (!processes.isEmpty) {
       Thread.sleep(timeout)
       if (!processes.isEmpty)
@@ -526,5 +526,24 @@ class WfSkip(private val findTarget: WfActivity => WfActivity) extends WfActivit
   // TODO 1-1
   //  override def toDsl = "skip " + target().key
   override def toDsl = throw new UnsupportedOperationException()
+}
+
+/** stop the current branch after the given number of passes */
+class WfStop(val pass: Int) extends WfActivity /*with HasDsl*/ {
+  var currPass = 0
+
+  override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = {
+    currPass += 1
+    if (currPass >= pass) {
+      val m = "STOPING: WfeStoppped the curent branc at pass: " + pass + " by " + this.toString
+      razie.Warn (m)
+      (v, Nil)
+    } else
+      (v, glinks)
+  }
+
+  // TODO from DSL
+  //  override def wname = "stop"
+  //  override def toDsl = "stop " + pass
 }
 

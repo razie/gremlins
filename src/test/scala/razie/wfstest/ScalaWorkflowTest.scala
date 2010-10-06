@@ -13,6 +13,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
   import razie.wfs
   import razie.wfs._
 
+  
   // some functions to simplify the workflows
   def finc(in: Any): Any = {
     val x = in.asInstanceOf[Int] + 1;
@@ -67,6 +68,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
   def testwss7 = expect ("1-a-b") { prun (wss7, 1) }
   def testwss9 = expect (3) { wss9.print run 1 }
 
+  
   // parallel
   def wsp1 =
     par {

@@ -38,6 +38,8 @@ Note: if you don't have a github ssh key setup, use the anonymous checkout:
     git clone git@github.com:razie/CodeMirror.git
 
 4 sbt build
+SETUP sbt: http://code.google.com/p/simple-build-tool/wiki/Setup
+NOTE this needs sbt 0.7.5-SNAPSHOT. please build that using these instructions: http://code.google.com/p/simple-build-tool/wiki/Build
 
     cd ${w}/razbase
     sbt update publish-local
