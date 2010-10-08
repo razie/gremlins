@@ -12,12 +12,12 @@ object Gremlins {
   def live : Engine = liveInside (new Engine with Threads)
   
   /** allow gremlins to live in the given engine */
-  def liveInside (e:Engine) = synchronized { 
+  def liveInside (e:Engine) : Engine = synchronized { 
     die; 
     dflt = Some(e)
     dflt.get 
     }
   
-  def apply() = synchronized { val e = (dflt getOrElse live); if (e.stopped) live else e }
+  def apply() : Engine = synchronized { val e = (dflt getOrElse live); if (e.stopped) live else e }
 }
 

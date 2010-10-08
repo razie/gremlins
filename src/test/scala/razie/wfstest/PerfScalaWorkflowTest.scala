@@ -6,14 +6,14 @@
 package razie.wfstest
 
 import org.scalatest.junit._
-import razie.gremlins.eng.{ Engine, Threads, Actors }
+import razie.gremlins.eng.{ Engine, Threads, Executors, Actors }
 
 class PerfScalaWorkflowTest extends JUnit3Suite {
   // import the wfs instead of the wf to get the scala workflows
   import razie.wfs._
   import razie.wf
 
-  val noflows = 1000
+  val noflows = 200
   val delay = 100
 
   class Counter(val ceiling: Int) {
@@ -29,7 +29,7 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
     w { counter.inc }
   }
 
-  def testwss2 = expect (true) {
+  def doit() = {
     val time = razie.Timer {
       
       for (i <- 1 to noflows)
@@ -40,7 +40,36 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
 
     }._1
     println ("!!!!!!!!!!!!!!!!!!!!!!!!!! done in " + time)
-    time < noflows * delay / 5
+//    time < noflows * delay / 5
+    time
+  }
+
+  def testit = expect (true) {
+    var results : List[String] = Nil
+    
+    //warmup
+    using (new Engine with Threads) {
+      doit
+    }
+    using (new Engine with Threads) {
+      results = ("With Threads in " + doit()) :: results
+    }
+    using (new Engine with Executors) {
+      results = ("With Executors in " + doit()) :: results
+    }
+    using (new Engine with Actors) {
+      results = ("With Actors in " + doit()) :: results
+    }
+    results.reverse foreach (println _)
+    true
+  }
+  
+  def using(e: Engine)(work: => Any) = {
+    razie.Gremlins.liveInside (e)
+    val ret = work
+    Thread.sleep(1000 + noflows/3); 
+    razie.Gremlins.die
+    ret
   }
 
   override def setUp() = {
@@ -48,9 +77,7 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
     razie.Log.impl = new REALLYSILENTLOG
 
     com.razie.pub.base.log.Log.SILENT = true
-    razie.Gremlins.liveInside (new Engine with Threads)
   }
-  override def tearDown() = { Thread.sleep(noflows/7); razie.Gremlins.die }
 }
 
 class REALLYSILENTLOG extends razie.Log {

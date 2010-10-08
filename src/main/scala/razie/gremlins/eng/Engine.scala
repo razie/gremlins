@@ -134,6 +134,10 @@ class ProcessThread(
 
     postProcessing
 
+    // if i finished, notify my root instance
+    if (!currAct.isInstanceOf[AndJoin] || ret.size <= 0)
+      parent.threadFinished (this, currV)
+
     (currV, ret)
   }
 
@@ -160,15 +164,11 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
   def setThreadCount(i: Int) = synchronized { this.countThreads += i }
   def getThreadCount = this.countThreads
 
-  // progress one thread - this would normally happen on its own thread
-  def execAndAdvance(t: ProcessThread): Seq[ProcessThread] = {
-    val (v, n) = t.execAndAdvance
+  def threadFinished(t: ProcessThread, v: Any) = {
     synchronized {
-      if (!t.currAct.isInstanceOf[AndJoin] || n.size <= 0)
-        lastV = v
+      lastV = v
     }
     Debug("execAndAdvance() lastV == " + lastV)
-    n
   }
 
   // if ran sync, theaads list is relevant . when async, count is relevant
@@ -194,16 +194,29 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
 
 trait Killeable { def kill() }
 
+/** stands for those that actually process the messages - the engine actually */
 trait Doer {
-  def processTick(msg: Any, killeable: Killeable): Unit
+  def processpTick(msg: PMsg, killeable: Killeable): Unit
+  def processtTack(msg: PTMsg, killeable: Killeable): Unit
+  def processTick(msg: Any, killeable: Killeable): Unit = msg match {
+    case p: PMsg => processpTick (p, killeable)
+    case t: PTMsg => processtTack (t, killeable)
+    case m@_ => throw new IllegalArgumentException("CANT process but p and t ticks "+m)
+  }
 }
 
-/** the engine is more complicated in this case, basically graph traversal */
+/** the primitives for execution control: threading */
 trait EngineStrategy { this: Doer =>
   /** send new message (work unit) to continue processing */
   def psend(msg: Any): Unit
+  /** spawn new execution unit (used by Actors) */
+  def pspawn(pt: ProcessThread): Unit = {}
+  def pspawn(pt: Process): Unit = {}
+  /** done - kill all threads/actors/executors/whatnot */
+  def pexit(): Unit
 }
 
+/** use plain threads with "executor" pattern */
 trait Threads extends EngineStrategy { this: Doer =>
   val mtp = new com.razie.pubstage.life.WorkerTP(10)
 
@@ -214,9 +227,64 @@ trait Threads extends EngineStrategy { this: Doer =>
     override def process() = processTick (msg, this)
     override def kill() = mtp kill this
   }
+
+  override def pexit(): Unit = {}
 }
 
+/** use mulitple actors: each process is an actor and each branch in a process is another actor */ 
 trait Actors extends EngineStrategy { this: Doer =>
+  import Actor._
+
+  var actors = new scala.collection.mutable.HashMap[Any, Actor]()
+  var maxActors = 0
+
+  private def dies(k: Any) = synchronized { actors remove k }
+  private def lives(k: Any, a: Actor) = synchronized { actors put (k, a); if (actors.size > maxActors) maxActors = actors.size }
+  private def find(k: Any): Option[Actor] = synchronized { actors get k }
+
+  /** spawn new execution unit (used by Actors) */
+  override def pspawn(pt: ProcessThread): Unit = {
+    val a = 
+      actor {
+        loop {
+          react {
+            case Exit => { dies (pt); exit() }
+            case msg: PTMsg => processtTack (msg, null)
+            case m@_ => throw new IllegalArgumentException("CANT process but t ticks "+m)
+          }
+        }
+        //    override def kill() = mtp kill this
+      }
+    lives (pt, a)
+  }
+
+  /** spawn new execution unit (used by Actors) */
+  override def pspawn(p: Process): Unit = {
+    val a = 
+      actor {
+        loop {
+          react {
+            case Exit => { dies (p); exit() }
+            case msg: PMsg => processpTick (msg, null)
+            case m@_ => throw new IllegalArgumentException("CANT process but p ticks "+m)
+          }
+        }
+        //    override def kill() = mtp kill this
+      }
+    lives (p, a)
+  }
+
+  def psend(msg: Any) = msg match {
+    case p: PMsg => find (p.p) map (_ ! msg)
+    case pt: PTMsg => find (pt.t) map (_ ! msg)
+    case m@_ => throw new IllegalArgumentException("CANT process but p and t ticks "+m)
+  }
+
+  override def pexit(): Unit = { actors.values map (_ ! Exit) }
+}
+
+/** use actors with "executor" pattern */
+trait Executors extends EngineStrategy { this: Doer =>
   import Actor._
 
   val processors: Array[Actor] = Array.fill(10) {
@@ -249,34 +317,53 @@ trait Actors extends EngineStrategy { this: Doer =>
       }
     }
   }
+
+  def pexit(): Unit = { processor ! Exit }
 }
 
-/** the engine is more complicated in this case, basically graph traversal */
-abstract class Engine extends Doer {
+// the messages
+trait PMsg { def p: Process }
+case class Start(p: Process) extends PMsg
+case class Tick(p: Process, result: Actor) extends PMsg
+case class Pre(p: Process) extends PMsg
+case class Done(p: Process) extends PMsg
 
-  import Actor._
+trait PTMsg { def p: Process; def t: ProcessThread }
+case class Tack(p: Process, t: ProcessThread, result: Actor) extends PTMsg
+case class Reply(p: Process, t: ProcessThread, rr: WRes.ReqReply, result: Actor) extends PTMsg
+case class Skip(p: Process, t: ProcessThread, result: Actor, target: WfActivity) extends PTMsg
+
+case class Exit()
+
+/** the engine is more complicated in this case, basically graph traversal */
+abstract class Engine extends Doer with EngineStrategy {
 
   val processes = new scala.collection.mutable.ListBuffer[Process]()
   var stopped = false
 
-  def psend(msg: Any)
-
   /** process one tick, advancing one execution path along the way - call from either threads or actors */
-  def processTick(msg: Any, killeable: Killeable) = {
+  override def processpTick(msg: PMsg, killeable: Killeable) {
     msg match {
       // tick is used just to kickstart all threads
       case Tick(p, a) => {
+        p.currThreads.map(pspawn(_))
         val s = p.currThreads.map(Tack(p, _, a)).toList
         p setThreadCount s.size
         s foreach (psend (_))
 
         if (p.done) a ! Done(p) // how to return the value?
       }
+    }
+  }
+
+  /** process one tick, advancing one execution path along the way - call from either threads or actors */
+  override def processtTack(msg: PTMsg, killeable: Killeable) {
+    msg match {
 
       case Tack(p, t, a) => {
         t.currActor = Option(killeable) // TODO Option(this)
         val s = try {
-          p.execAndAdvance(t) // this carries out the actual work...
+          t.execAndAdvance._2 // this carries out the actual work...
         } catch {
           case s@_ => {
             Nil
@@ -340,6 +427,7 @@ abstract class Engine extends Doer {
                 } // how to return the value?
               }
             }
+            s filter (_ != t) map (pspawn(_))
             s map (ptt => psend (Tack(p, ptt, a)))
         }
       } // case Tack
@@ -393,19 +481,8 @@ abstract class Engine extends Doer {
           //         if (p.done) a ! Done(p) // how to return the value?
         }
       }
-
-      case Exit => //exit()
     }
   }
-
-  case class Start(p: Process)
-  case class Tick(p: Process, result: Actor)
-  case class Tack(p: Process, t: ProcessThread, result: Actor)
-  case class Reply(p: Process, t: ProcessThread, rr: WRes.ReqReply, result: Actor)
-  case class Skip(p: Process, t: ProcessThread, result: Actor, target: WfActivity)
-  case class Pre(p: Process)
-  case class Done(p: Process)
-  case class Exit()
 
   def create(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): GRef = {
     val p = new Process(wf.scope(start), startV, ctx)
@@ -430,6 +507,7 @@ abstract class Engine extends Doer {
       override def act() = receive {
         case Start(p) => {
           preProcess(p)
+          pspawn(p)
           psend (Tick(p, this))
           receive {
             case Done(p) => {
@@ -469,7 +547,7 @@ abstract class Engine extends Doer {
 
     // progress all threads - this is temp until I get the threading done
     while (!p.done)
-      p.currThreads = p.currThreads.flatMap(p.execAndAdvance(_))
+      p.currThreads = p.currThreads.flatMap(_.execAndAdvance._2)
 
     p.lastV
   }
@@ -495,7 +573,7 @@ abstract class Engine extends Doer {
     }
 
     stopped = true
-    psend (Exit)
+    pexit()
   }
 }
 
