@@ -26,9 +26,9 @@ class GTest extends JUnit3Suite {
   import razie.gremlins.lib.PiCalc._
   
   def myp11 = WfAssetCmd ("play", GRef.id("Miku", "13"), razie.AA(), Map("maki" -> $0))
-  def testmyp11 = expect (true) { (myp11.print run "1").asInstanceOf[String] matches "snakked.*maki=1.*" }
+  def testmyp11 = expect (true) { (myp11.print run "1").asInstanceOf[String] matches "snakked.*maki.*=1.*" }
   println(wf toDsl myp11)
-  def testmyp12 = expect (true) { (wf(wf toDsl myp11).print run "1").asInstanceOf[String] matches "snakked.*maki=1.*" }
+  def testmyp12 = expect (true) { (wf(wf toDsl myp11).print run "1").asInstanceOf[String] matches "snakked.*maki.*=1.*" }
   
   override def setUp () = { Gremlins.live;  GAMAct.assetMgr = TestGAM }
   override def tearDown () = { Gremlins.die }
