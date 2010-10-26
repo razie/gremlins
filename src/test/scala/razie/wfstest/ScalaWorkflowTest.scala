@@ -21,7 +21,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
     x
   }
 
-  def fapp(app: String)(in: Any): Any = {
+  def woohoo(app: String)(in: Any): Any = {
     val x = in.toString + "-" + app;
     println ("------------- woohoo " + x);
     x
@@ -42,12 +42,12 @@ class ScalaWorkflowTest extends JUnit3Suite {
     println ("------------------woohoo start")
     later {
       println ("------------------woohoo build a")
-      fapp ("a") _
+      woohoo ("a") _
     }
     println ("------------------woohoo between")
     later {
       println ("------------------woohoo build b")
-      fapp ("b") _
+      woohoo ("b") _
     }
     println ("------------------woohoo end")
   }
@@ -71,12 +71,12 @@ class ScalaWorkflowTest extends JUnit3Suite {
       println ("------------------woohoo start")
       later {
         println ("------------------woohoo build a")
-        fapp ("a") _
+        woohoo ("a") _
       }
       println ("------------------woohoo between")
       later {
         println ("------------------woohoo build b")
-        fapp ("b") _
+        woohoo ("b") _
       }
       println ("------------------woohoo end")
     }
@@ -90,29 +90,29 @@ class ScalaWorkflowTest extends JUnit3Suite {
       par {
         seq {
           println ("------------------woohoo build a")
-          later { fapp("a") _ }
+          later { woohoo("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          later { fapp("b") _ }
+          later { woohoo("b") _ }
         }
       }
     }
   def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
 
   // multilevel - workflow built and then ran: 
-  // the fapp is now invoked as a separate activity and others may cut in - note the sequence of messages is likely different
+  // the woohoo is now invoked as a separate activity and others may cut in - note the sequence of messages is likely different
   def wsp4 =
     seq {
       println ("------------------woohoo start")
       par {
         seq {
           println ("------------------woohoo build a")
-          later { fapp("a") _ }
+          later { woohoo("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          later { fapp("b") _ }
+          later { woohoo("b") _ }
         }
       }
     }
@@ -125,11 +125,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
       par {
         seq {
           println ("------------------woohoo build a")
-          later { fapp("a") _ }
+          later { woohoo("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          later { fapp("b") _ }
+          later { woohoo("b") _ }
         }
       }
     }
@@ -142,10 +142,10 @@ class ScalaWorkflowTest extends JUnit3Suite {
         seq {
           par {
             seq {
-              wfs later fapp("a") _
+              wfs later woohoo("a") _
             }
             seq {
-              wfs later fapp("b") _
+              wfs later woohoo("b") _
             }
           }
           sort[String] (_ < _)
@@ -154,10 +154,10 @@ class ScalaWorkflowTest extends JUnit3Suite {
         seq {
           par {
             seq {
-              wfs later fapp("a") _
+              wfs later woohoo("a") _
             }
             seq {
-              wfs later fapp("b") _
+              wfs later woohoo("b") _
             }
           }
           sort[String] (_ < _)

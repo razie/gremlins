@@ -3,19 +3,29 @@ Scala workflows
 
 A scala workflow is one where the activities are scala code. Since these are defined as a scala DSL, there are two passes: the first pass that will build the workflow structure and the second pass that actually runs the workflow:
 
-    def wss7 = seq {
-      println ("------------------woohoo start")
-      later {
-        println ("------------------woohoo build a")
-        fapp ("a") _
+    import razie.wfs._
+      def woohoo(app: String)(in: Any): Any = {
+        val x = in.toString + "-" + app;
+        println ("------------- woohoo " + x);
+        x
       }
-      println ("------------------woohoo between")
-      later {
-        println ("------------------woohoo build b")
-        fapp ("b") _
+
+      def wss7 = seq {
+        println ("------------------woohoo start")
+        later {
+          println ("------------------woohoo build a")
+          woohoo ("a") _
+        }
+        println ("------------------woohoo between")
+        later {
+          println ("------------------woohoo build b")
+          woohoo ("b") _
+        }
+        println ("------------------woohoo end")
       }
-      println ("------------------woohoo end")
-    }
+
+      wss7 run 1   // starts the workflow with 1 as the input value
+
  
 The sequence of the messages clearly shows the two passes:
 
@@ -24,8 +34,8 @@ The sequence of the messages clearly shows the two passes:
     ------------------woohoo between
     ------------------woohoo build b
     ------------------woohoo end
-    ------------- woohoo a
-    ------------- woohoo b
+    ------------- woohoo 1-a
+    ------------- woohoo 1-a-b
 
 The other thing to note here is that, at run time, for the collected activities, there is an "invisible" value being passed around. Each activity is a Any => Any.
 
@@ -63,7 +73,7 @@ While seq/par deal with the structure of the workflow, later/matchLater build le
 
 The signature shows another difference: these contain the actual body of scala code the activity will execute at run-time. It also makes them applicable to two different constructs:
 
-    later { fapp("b") _ }
+    later { woohoo("b") _ }
 
     matchLater {
       case l: List[String] => l mkString ","
@@ -82,11 +92,11 @@ The same workflow can be built in "lazy" mode or "strict" mode. This shows in mu
         par {
           seq {
             println ("------------------woohoo build a")
-            later { fapp("a") _ }
+            later { woohoo("a") _ }
           }
           seq {
             println ("------------------woohoo build b")
-            later { fapp("b") _ }
+            later { woohoo("b") _ }
           }
         }
       }
