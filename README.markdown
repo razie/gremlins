@@ -202,7 +202,7 @@ Nasty timeout - will interrupt the target thread if it takes too long and skip t
 Scala workflows
 ===============
 
-Due to popular demand, I created a "wfs" version to just run scala code in parallel.
+Due to popular demand, I created a "wfs" version to just run scala code in parallel. Read the detailed user guide [here ](gremlins/blob/master/ScalaWorkflows.markdown).
 
 Lazy Example: 
 -------------
@@ -212,13 +212,13 @@ Lazy Example:
       par {      
         seq {      
           println ("he he - definition time")
-          async { _ + "runtime-a" }
+          later { _ + "runtime-a" }
           }
-        async { _ + "runtime-b" }
+        later { _ + "runtime-b" }
         }
         sort[String] (_ < _)
-       later { case x : List[String] => x mkString "," }  
-       }
+        matchLater { case x : List[String] => x mkString "," }  
+      }
 
 The body of the different nodes are executed as the nodes are run!
 
@@ -230,13 +230,13 @@ Strict Example:
       par {      
         seq {      
           println ("he he - definition time")
-          async { _ + "runtime-a" }
+          later { _ + "runtime-a" }
           }
-        async { _ + "runtime-b" }
+        later { _ + "runtime-b" }
         }
         sort[String] (_ < _)
-       later { case x : List[String] => x mkString "," }  
-       }
+        matchLater { case x : List[String] => x mkString "," }  
+      }
 
 Simulating the let! (let bang) from F#
 --------------------------------------
@@ -247,7 +247,7 @@ of the let! syntax and the overall behavior, as a scala DSL:
 
     def wfa1 = seq {
       val a = let! async { _ + "-a" }
-      later { case _ => a.get + "-b" }
+      matchLater { case _ => a.get + "-b" }
     }
 
 Follow this approach to assign named variables to intermediary results.

@@ -69,10 +69,10 @@ class wfs {
   def seqf(f: (Any) => Any): WfActivity = sync (f)
   /** create leaf activity containing scala code. It cannot contain more activities */
   def sync(f: (Any) => Any): WfActivity = w(f)
-  def sync(f: => Unit): WfActivity = w(f)
+//  def sync(f: => Unit): WfActivity = w(f)
   /** create leaf activity containing scala code. It cannot contain more activities */
   def async(f: (Any) => Any): WfActivity = w(f)
-  def async(f: => Unit): WfActivity = w(f)
+//  def async(f: => Unit): WfActivity = w(f)
 
   /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
   def seq(f: => Unit): WfActivity = new WfDynSeq(new WfeScala(f))
@@ -100,12 +100,12 @@ class wfs {
   //  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
   //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
-  //  def later(f: => Unit) = new WfScala(() => f)
-  //  def later(f: (Any) => Any) = new WfScalaV1((x) => f(x))
-  def later[B](f: PartialFunction[Any, B]) =
+  def later(f: Any => Any): WfActivity = w(f)
+//  def later(f: => Unit): WfActivity = w(f)
+  def matchLater[B](f: PartialFunction[Any, B]) =
     new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
 
-  def apply(f: => Unit) = w(f)
+//  def apply(f: => Unit) = w(f)
   def apply(f: Any => Any) = w(f)
 
   /** assign name in context to the last value produced by the previous activity */
@@ -336,6 +336,7 @@ object wfs extends wfs
  * @author razvanc
  */
 object wft extends wfs {
+  def apply(f: => Unit) = w(f)
   //----------------- base activitities
 
   // TODO this doesn't work if implicit...see ScaBug1

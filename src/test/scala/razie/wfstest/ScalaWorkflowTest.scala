@@ -40,12 +40,12 @@ class ScalaWorkflowTest extends JUnit3Suite {
   // sequence - note the laziness in the printed messages
   def wss7 = seq {
     println ("------------------woohoo start")
-    sync {
+    later {
       println ("------------------woohoo build a")
       fapp ("a") _
     }
     println ("------------------woohoo between")
-    sync {
+    later {
       println ("------------------woohoo build b")
       fapp ("b") _
     }
@@ -55,13 +55,9 @@ class ScalaWorkflowTest extends JUnit3Suite {
   // preserving types
   def wss9 = seq {
     println ("------------------woohoo start")
-    sync {
-      finc _
-    }
+    later { finc _ }
     println ("------------------woohoo between")
-    sync {
-      finc _
-    }
+    later { finc _ }
     println ("------------------woohoo end")
   }
 
@@ -73,12 +69,12 @@ class ScalaWorkflowTest extends JUnit3Suite {
   def wsp1 =
     par {
       println ("------------------woohoo start")
-      sync {
+      later {
         println ("------------------woohoo build a")
         fapp ("a") _
       }
       println ("------------------woohoo between")
-      sync {
+      later {
         println ("------------------woohoo build b")
         fapp ("b") _
       }
@@ -94,11 +90,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
       par {
         seq {
           println ("------------------woohoo build a")
-          sync { fapp("a") _ }
+          later { fapp("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          sync { fapp("b") _ }
+          later { fapp("b") _ }
         }
       }
     }
@@ -112,11 +108,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
       par {
         seq {
           println ("------------------woohoo build a")
-          w { fapp("a") _ }
+          later { fapp("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          w { fapp("b") _ }
+          later { fapp("b") _ }
         }
       }
     }
@@ -129,11 +125,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
       par {
         seq {
           println ("------------------woohoo build a")
-          sync { fapp("a") _ }
+          later { fapp("a") _ }
         }
         seq {
           println ("------------------woohoo build b")
-          sync { fapp("b") _ }
+          later { fapp("b") _ }
         }
       }
     }
@@ -146,26 +142,26 @@ class ScalaWorkflowTest extends JUnit3Suite {
         seq {
           par {
             seq {
-              wfs sync fapp("a") _
+              wfs later fapp("a") _
             }
             seq {
-              wfs sync fapp("b") _
+              wfs later fapp("b") _
             }
           }
           sort[String] (_ < _)
-          later { case l: List[String] => l mkString "," }
+          wfs matchLater { case l: List[String] => l mkString "," }
         }
         seq {
           par {
             seq {
-              wfs sync fapp("a") _
+              wfs later fapp("a") _
             }
             seq {
-              wfs sync fapp("b") _
+              wfs later fapp("b") _
             }
           }
           sort[String] (_ < _)
-          later {
+          matchLater {
             case l: List[String] => l mkString ","
           }
         }
@@ -178,15 +174,15 @@ class ScalaWorkflowTest extends JUnit3Suite {
   // just a DSL example of simulating the let! from F#
   def wfa1 = seq {
     val a = let! sync { _ + "-a" }
-    later { case _ => a.get + "-b" }
+    matchLater { case _ => a.get + "-b" }
   }
   
   def testwfa1 = expect ("1-a-b") { prun (wfa1, 1) }
   
   // can't define activities in a sync/async leaf
-  def wfcl1 = sync {
-    later { case _ => "-b" }
-    println ("unit")
+  def wfcl1 = w {
+    matchLater { case _ => "-b" }
+    println ("xx") // need this due to signature
   }
 // TODO  
 //  def testwfcl1 = expect ("1-a-b") { prun (wfa1, 1) }
