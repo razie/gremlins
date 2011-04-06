@@ -9,10 +9,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.StringTokenizer;
 
-import com.razie.pub.base.log.Log;
+import sun.rmi.runtime.Log;
 
 /**
  * simple helper to execute windows commands
@@ -140,6 +141,7 @@ public class WinExec {
     */
    static class StreamGobbler extends Thread {
       InputStream   is;
+      OutputStream  os; // optionally
       String        type;
       StringBuilder acc        = new StringBuilder();
       boolean       accumulate = false;
@@ -159,9 +161,18 @@ public class WinExec {
                logger.trace(2, "   " + type + ">" + line);
                if (accumulate)
                   acc.append(line).append("\n");
+               if (os != null)
+                 os.write(new StringBuilder(line).append("\n").toString().getBytes());
             }
          } catch (IOException ioe) {
             logger.alarm("while gobbling...", ioe);
+         } finally {
+           try {
+             is.close();
+             if (os != null) os.close();
+           } catch (Throwable t){
+              // ignore it
+           }
          }
       }
 

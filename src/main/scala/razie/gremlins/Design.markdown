@@ -74,3 +74,9 @@ These services are special in the sense that they are the only that can suspend 
 for a response.
 
 
+Persistency
+-----------
+
+Workflow definition is persited separately from the instance status, with links between them.
+
+

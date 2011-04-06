@@ -60,7 +60,7 @@ class PTState(start: WfActivity, startValue: Any, startLink: Option[WfLink]) {
  * actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
  * conceptually these are independent paths of execution, for the PAR/JOIN branches for instance
  */
-class ProcessThread(
+class ProcessThread (
   val parent: Process, start: WfActivity, startLink: Option[WfLink],
   val ctx: AC, startValue: Any) extends PTState(start, startValue, startLink) {
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
