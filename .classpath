@@ -9,7 +9,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/scripster"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.9.0-1/compile/scalatest_2.9.0-1.6.1.jar"/>
 	<classpathentry kind="lib" path="project/boot/scala-2.9.0-1/lib/scala-compiler.jar"/>
-	<classpathentry kind="lib" path="lib_managed/scala_2.9.0-1/compile/razweb_2.9.0-1-0.3.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.9.0-1/compile/json-20090211.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.9.0-1/compile/razweb_2.9.0-1-0.4-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

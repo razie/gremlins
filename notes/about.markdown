@@ -1,4 +1,4 @@
-[Gremlins](http://github.com/razie/gremlins) is a scala DSL and Workflow engine for asynchronous and parallel programming.
+[Razie's Gremlins](http://github.com/razie/gremlins) is a scala DSL and Workflow engine for asynchronous and parallel programming.
 
 Why? Threads, shared state, actors, processes...they're all stepping stones. A framework that allows full expressivity for creating asynchronous/parallel and distributed work units are what we need.
 
