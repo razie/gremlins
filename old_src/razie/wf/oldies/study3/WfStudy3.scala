@@ -174,7 +174,7 @@ case class WfCaseB (val x: () => Any, val f : (Any) => Unit) extends WfSimple {
 //  def welif (cond : => Boolean) (f: => Unit) = {this.e=WfElIf (()=>cond, WfScala(()=>f)); this}
 //}
 
-object Wf3Main extends Application {
+object Wf3Main extends App {
    import Wf._
 
    var acc = ""

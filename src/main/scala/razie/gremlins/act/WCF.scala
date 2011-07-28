@@ -89,7 +89,7 @@ object WCF extends WCFBase with WCFBaseLib with CspWcf {
 ////  override def wtypes : Parser[WfActivity] = super.wtypes | WCFBaseLib.activities | csp_lib
 //}
 
-object WFCMain extends Application {
+object WFCMain extends App {
   val s1 =
 """nop""" 
 

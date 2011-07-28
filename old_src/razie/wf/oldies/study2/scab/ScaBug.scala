@@ -1,6 +1,6 @@
 package razie.wf.study2.scab
 
-object ScaBug1 extends Application {
+object ScaBug1 extends App {
    var acc = ""
       
    case class C1 (val f:() =>Unit) {
@@ -20,7 +20,7 @@ object ScaBug1 extends Application {
   acc
 }
 
-object ScaBug2 extends Application {
+object ScaBug2 extends App {
   trait WfAct {
     def exec()
   }

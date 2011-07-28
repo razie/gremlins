@@ -88,7 +88,7 @@ class WCF extends JavaTokenParsers {
   def parseitman (s:String) = parseAll(wfdefn, s)
 } 
 
-object WFCMain extends Application {
+object WFCMain extends App {
   val s1 =
 """nop""" 
 

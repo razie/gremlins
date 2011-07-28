@@ -14,7 +14,7 @@ import razie.wf
 import razie.gremlins.act._
 import razie.Gremlins
 
-object SimplestPiSample extends Application {
+object SimplestPiSample extends App {
   import PiCalc._
  
   def P = wf.log($0 + "-P")
@@ -47,7 +47,7 @@ object CspSamples {
   // 4. TODO
 }
 
-object PiSamples extends Application {
+object PiSamples extends App {
   import PiCalc._
  
   def c = Channel("c", 0) // channel c

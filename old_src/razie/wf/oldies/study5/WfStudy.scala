@@ -5,7 +5,7 @@ import razie.base.{ActionContext => AC}
 
 //--------------------- samples
 
-object Wf5Main extends Application {
+object Wf5Main extends App {
    import wf._
 
    var acc = ""

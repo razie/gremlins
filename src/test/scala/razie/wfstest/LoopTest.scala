@@ -8,7 +8,7 @@ package razie.wfstest
 import org.scalatest.junit._
 import razie.gremlins.eng.{ Engine, Threads }
 
-class LoopTestMain extends Application {
+class LoopTestMain extends App {
   val t = new LoopTest
   t.setUp()
 //  t.testwif1

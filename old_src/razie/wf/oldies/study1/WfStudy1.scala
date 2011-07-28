@@ -68,7 +68,7 @@ trait WfAct extends WfExec {
   }
   
 
-object Wf1Main extends Application {
+object Wf1Main extends App {
   import Wf1._
    
   // test

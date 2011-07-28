@@ -226,7 +226,7 @@ class PMap(m: Map[String, ParmSource]) extends Mapping {
 
 }
 
-object SampleMapping extends Application with MappingDefn {
+object SampleMapping extends App with MappingDefn {
   val p1 = new PMap(Map("a" -> "val1", "b" -> "val2"))
 }
 
