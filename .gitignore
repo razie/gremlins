@@ -3,6 +3,8 @@ bin
 dist
 project/boot
 project/build/target
+project/plugins/project
+project/plugins/src_managed
 lib_managed
 target
 
