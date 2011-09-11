@@ -15,6 +15,6 @@ class PGremlins(info: ProjectInfo) extends DefaultProject(info) with posterous.P
   val junit =     "junit"         % "junit"     % "4.5" % "test->default"
   def json =      "org.json"      % "json"      % "20090211"
 
-  val scripster   = "com.razie" %% "scripster"       % ("0.7" + snap)
+  val scripster   = "com.razie" %% "scripster"       % ("0.8" + snap)
 }
 
