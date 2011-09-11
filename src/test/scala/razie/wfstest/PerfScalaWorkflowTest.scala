@@ -87,5 +87,6 @@ class REALLYSILENTLOG extends razie.Log {
   override def alarm(msg: String, t: Throwable = null) = println ("ALARM: " + th + msg, t)
   override def audit(msg: String, t: Throwable = null) = {}
   override def error(msg: String, t: Throwable = null) = { println("ERROR: " + th + msg, t); throw t }
+  override def silent (f:Boolean) {}
 }
 

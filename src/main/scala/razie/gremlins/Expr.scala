@@ -71,7 +71,7 @@ case class BCMP1 (a:BExpr, s:String, b:BExpr) extends BExpr (a.toDsl+" "+s+" "+b
      override def apply (in:AC, v:Any) = s match {
         case "||" => a.apply(in, v) || b.apply(in, v)
         case "&&" => a.apply(in, v) && b.apply(in, v)
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
+        case _ => sys.error ("Operator " + s + " UNKNOWN!!!")
         } 
      }
 
@@ -84,7 +84,7 @@ case class BCMP2  (a:AExpr, s:String, b:AExpr) extends BExpr (a.toDsl+" "+s+" "+
         case ">=" => a(in, v).toString >= b(in, v).toString
         case "<" => a(in, v).toString < b(in, v).toString
         case ">" => a(in, v).toString > b(in, v).toString
-        case _ => error ("Operator " + s + " UNKNOWN!!!")
+        case _ => sys.error ("Operator " + s + " UNKNOWN!!!")
         } 
      }
 

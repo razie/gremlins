@@ -91,6 +91,38 @@ log($0)
 
   def wt1 = timeout (1000) { sleep(5000) }
   def testwt1 = expect (true) { razie.Timer { wt1.print run 1 } ._1 < 2000 }
+  
+  def wiff1 = wif (_ == 1) {
+     wf.assign("x", 1)
+   } welse { 
+     wf.assign("x", 4)
+   }
+   
+  def wiff2 = wif (_ == 1) {
+     wf.assign("x", 1)
+   } welse wif (_ == 2) { 
+     wf.assign("x", 2)
+   }
+   
+  def wiff3 = wif (_ == 1) {
+     wf.assign("x", 1)
+   } welse wif (_ == 2) { 
+     wf.assign("x", 2)
+   } welse wif (_ == 3) { 
+     wf.assign("x", 3)
+   }
+   
+  def wiff4 = wif (_ == 1) {
+     wf.assign("x", 1)
+   } welse wif (_ == 2) { 
+     wf.assign("x", 2)
+   } welse wif (_ == 3) { 
+     wf.assign("x", 3)
+   } welse { 
+     wf.assign("x", 3)
+   }
+   
+   
 
   override def setUp () = { Gremlins.live }
   override def tearDown () = { Gremlins.die }
