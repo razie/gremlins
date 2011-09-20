@@ -17,7 +17,7 @@ import razie.gremlins.act._
  * 
  * Lazy Example: 
  * {{{  
- * val workflow = seq {    
+ * def workflow = seq {    
  *   par {      
  *     seq {      
  *       println ("he he - definition time")
@@ -34,17 +34,7 @@ import razie.gremlins.act._
  * 
  * Strict Example: 
  * {{{  
- * val workflow = wfs strict seq {    
- *   par {      
- *     seq {      
- *       println ("he he - definition time")
- *       async { _ + "runtime-a" }
- *       }
- *     async { _ + "runtime-b" }
- *     }
- *     sort[String] (_ < _)
- *    later { case x : List[String] => x mkString "," }  
- *    }
+ * val strict_workflow = wfs strict workflow // that's why workflow above is a def not a val
  * }}}
  * 
  * The ENTIRE body is executed once, like the constructor of a class. only specially marked statements 
