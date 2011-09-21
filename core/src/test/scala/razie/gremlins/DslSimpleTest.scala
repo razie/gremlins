@@ -38,6 +38,9 @@ log($0)
 //  def w20 = wf.nop + wf.log($0 + ".") + wf.log($0 + ".")
 //  def testw20 = expect ("1..") { w20 run "1" }
 
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+    // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp () = { Gremlins.live() }
+  override def tearDown () = { Gremlins.die() }
 }

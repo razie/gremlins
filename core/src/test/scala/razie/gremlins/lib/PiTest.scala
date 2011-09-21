@@ -39,6 +39,9 @@ class PiTest extends JUnit3Suite {
   def myp41 = v(c) (c.get($0) --> P | c.put($0) <-- Q)  // correct v(c) ( c(0) P | c<0> Q )
   def testmyp41 = expect (true) { (myp41.print run "1").asInstanceOf[List[_]] contains "1-Q-P" }
   
-  override def setUp () = { Gremlins.live; AllResources.clear }
-  override def tearDown () = { Gremlins.die; AllResources.clear }
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp () = { Gremlins.live(); AllResources.clear }
+  override def tearDown () = { Gremlins.die(); AllResources.clear }
 }

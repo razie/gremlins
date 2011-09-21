@@ -1,4 +1,4 @@
-/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+/** ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -8,32 +8,31 @@ package razie.gremlins
 import razie.AA
 import razie.base.{ ActionContext => AC }
 import razie.g._
-import razie.{wf, gremlins}
+import razie.{ wf, gremlins }
 import razie.Gremlins
 
-/** 
- * This is the basic node in the graph: an activity waiting to be traversed/executed. 
- * 
- * The workflow is modelled as a graph of activities connected by links/dependencies.
- * 
- * Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
+/** This is the basic node in the graph: an activity waiting to be traversed/executed.
+ *
+ *  The workflow is modelled as a graph of activities connected by links/dependencies.
+ *
+ *  Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
 abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.WfaState with razie.g.WRGraph[WfActivity, WfLink] {
   //  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
   override var glinks: Seq[WfLink] = Nil // links 
 
   /** the engine is traversing the graph...similar to executing it.
-   * 
-   * executing these means maybe doing something (in=>out) AND figuring out who's next
-   * 
-   * @param in the current context, containing variables objects whatnot
-   * @param v the current value (in good scala tradition, each statemnt returns a value - this is basically the preceeding value)- 
-   * @return (my value, next activities - the links I think should go next). 
-   * 
-   * NOTE that the links returned must be one of the static links - you can't make up new ones...otherwise I cannot recover state from storage?
+   *
+   *  executing these means maybe doing something (in=>out) AND figuring out who's next
+   *
+   *  @param in the current context, containing variables objects whatnot
+   *  @param v the current value (in good scala tradition, each statemnt returns a value - this is basically the preceeding value)-
+   *  @return (my value, next activities - the links I think should go next).
+   *
+   *  NOTE that the links returned must be one of the static links - you can't make up new ones...otherwise I cannot recover state from storage?
    */
   def traverse(in: AC, v: Any): (Any, Seq[WfLink])
-  def traverse(from: Option[WfLink], in: AC, v: Any): (Any, Seq[WfLink]) = traverse (in, v)
+  def traverse(from: Option[WfLink], in: AC, v: Any): (Any, Seq[WfLink]) = traverse(in, v)
 
   override def toString: String = this.getClass().getSimpleName + " (" + key + ")"
 
@@ -44,7 +43,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
 
   // limit depth for debugging purposes
   override def mkString = Graphs.entire[WfActivity, WfLink](this).dag.mkString
-  def print(): WfActivity = { println (this.mkString); this }
+  def print(): WfActivity = { println(this.mkString); this }
   def debug(): WfActivity = { wf toDsl this; print }
 
   // simplified execution
@@ -64,8 +63,9 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def <--(z: WfActivity): WfActivity = z --> this
   def <-+(z: WfActivity): WfActivity = z +-> this
 
-  /** this will bind it to a parent in a DSL construct. Use this very carefully. 
-   * Find usages by seeing who pushes self into WfaCollector */
+  /** this will bind it to a parent in a DSL construct. Use this very carefully.
+   *  Find usages by seeing who pushes self into WfaCollector
+   */
   WfaCollector.current.map { _ collect this }
 }
 

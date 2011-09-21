@@ -73,7 +73,7 @@ class ActorTest extends JUnit3Suite {
   def using(e: Engine)(work: => Any) = {
     razie.Gremlins.liveInside (e)
     val ret = work
-    razie.Gremlins.die
+    razie.Gremlins.die()
     ret
   }
 

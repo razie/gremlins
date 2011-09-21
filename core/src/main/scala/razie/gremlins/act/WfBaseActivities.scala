@@ -215,7 +215,7 @@ class WfPar(a: WfActivity*) extends WfBound with HasDsl {
   override def lastAct: WfActivity = glinks.lastOption.map(x => gnodes.last).getOrElse(this)
 
   // to avoid par(par(t)) we redefine to just link to what i already have
-  override def |(e: WfActivity) = {
+  override def | (e: WfActivity) = {
     val p = wf.scope(e)
     glinks = List(new WfLink(this, p)) ::: glinks.toList
     gnodes = gnodes.toList ::: List(p)

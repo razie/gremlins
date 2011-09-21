@@ -83,6 +83,9 @@ par {
   def testwpar6 = expect (2) { wf(wf toDsl wpar6.print) run 1 }
   def testwpar7 = expect (2::3::Nil) { razie.M.anyOrder (wf(wf toDsl wpar7.print) run 1) }
 
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp () = { Gremlins.live() }
+  override def tearDown () = { Gremlins.die() }
 }

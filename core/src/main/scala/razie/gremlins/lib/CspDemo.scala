@@ -27,7 +27,7 @@ object SimplestPiSample extends App {
   myp02.print 
   println ("RRRRRRRRRRRRRESULT is: " + (myp02 run "1"))
   
-  Gremlins.die
+  Gremlins.die()
 }
 
 object CspSamples {
@@ -86,7 +86,7 @@ object PiSamples extends App {
       throw new IllegalArgumentException ("Require failed on wf: " + (wf toDsl root))
   }
 
-  Gremlins.die
+  Gremlins.die()
 }
 
 

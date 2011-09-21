@@ -7,6 +7,7 @@ package razie.wfstest
 
 import org.scalatest.junit._
 import razie.gremlins.eng.{Engine, Threads}
+import razie.Gremlins
 
 class ScalaWorkflowTest extends JUnit3Suite {
   // import the wfs instead of the wf to get the scala workflows
@@ -30,7 +31,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
   // MISTAKE: finc is completely ignored
   val wss2 = seq { finc _ }
   // correct
-  val wss3 = sync (finc _)
+  val wss3 = later (finc _)
   val wss4 = async (finc _)
   
   def testwss2 = expect (1) { prun (wss2, 1) }
@@ -173,7 +174,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
 
   // just a DSL example of simulating the let! from F#
   def wfa1 = seq {
-    val a = let! sync { _ + "-a" }
+    val a = let! async { _ + "-a" }
     matchLater { case _ => a.get + "-b" }
   }
   
@@ -187,8 +188,11 @@ class ScalaWorkflowTest extends JUnit3Suite {
 // TODO  
 //  def testwfcl1 = expect ("1-a-b") { prun (wfa1, 1) }
   
-  override def setUp() = { razie.Gremlins.liveInside (new Engine with Threads) }
-  override def tearDown() = { razie.Gremlins.die }
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp() = { Gremlins.liveInside (new Engine with Threads) }
+  override def tearDown() = { Gremlins.die() }
   
   // simplify running the workflow
   def prun(p: razie.gremlins.WfActivity, s: Any) = {

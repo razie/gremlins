@@ -9,9 +9,6 @@ import org.scalatest.junit._
 import razie.gremlins.eng.{ Engine, Threads, Executors, Actors }
 
 class PerfScalaWorkflowTest extends JUnit3Suite {
-  // import the wfs instead of the wf to get the scala workflows
-  import razie.wfs._
-  import razie.wf
 
   val noflows = 200
   val delay = 100
@@ -24,6 +21,10 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
 
   val counter = new Counter(noflows)
 
+  // import the wfs instead of the wf to get the scala workflows
+  import razie.wfs._
+  import razie.wf       // can mix activities in a scala wd
+  
   def wpp1 = seq {
     wf.sleepAsync (delay)
     w { counter.inc }
@@ -67,8 +68,8 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
   def using(e: Engine)(work: => Any) = {
     razie.Gremlins.liveInside (e)
     val ret = work
-    Thread.sleep(1000 + noflows/3); 
-    razie.Gremlins.die
+//    Thread.sleep(1000 + noflows/3); 
+    razie.Gremlins.die (8000)
     ret
   }
 

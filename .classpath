@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="core/src/main/scala"/>
 	<classpathentry kind="src" path="core/src/test/scala"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/razbase"/>
@@ -10,5 +9,6 @@
 	<classpathentry kind="lib" path="project/boot/scala-2.9.1/lib/scala-compiler.jar"/>
 	<classpathentry kind="lib" path="core/lib_managed/scala_2.9.1/compile/json-20090211.jar"/>
 	<classpathentry kind="lib" path="core/lib_managed/scala_2.9.1/compile/scalatest_2.9.1-1.6.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

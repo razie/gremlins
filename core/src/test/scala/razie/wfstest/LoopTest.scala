@@ -34,17 +34,17 @@ class LoopTest extends JUnit3Suite {
       println ("------------------woohoo start")
       wif (_ == 1) {
         println ("------------------woohoo build a")
-        sync { fapp("a") _ }
+        later { fapp("a") _ }
       } welse {
         println ("------------------woohoo build b")
-        sync { fapp("b") _ }
+        later { fapp("b") _ }
       }
       wif (_ == 2) {
         println ("------------------woohoo build a")
-        sync { fapp("a") _ }
+        later { fapp("a") _ }
       } welse {
         println ("------------------woohoo build b")
-        sync { fapp("b") _ }
+        later { fapp("b") _ }
       }
     }
   def testwif1  = expect ("1-a-b") { prun (wif1, 1) }
@@ -55,7 +55,7 @@ class LoopTest extends JUnit3Suite {
     seq {
       var x = 0 // bad - var in scala, no state captured in the workflow
       wforeach {
-        later { case i:Int => x += i }
+        matchLater { case i:Int => x += i }
       }
       w { _ => x } // another way to assign x to the default value
     }
@@ -100,8 +100,11 @@ class LoopTest extends JUnit3Suite {
     }
   //  def testwsp4 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp4, 1) }
 
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { razie.Gremlins.kill() }
+
   override def setUp() = { razie.Gremlins.liveInside (new Engine with Threads) }
-  override def tearDown() = { razie.Gremlins.die }
+  override def tearDown() = { razie.Gremlins.die() }
 
   // simplify running the workflow
   def prun(p: razie.gremlins.WfActivity, s: Any) = {

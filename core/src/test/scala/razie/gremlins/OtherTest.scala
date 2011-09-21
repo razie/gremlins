@@ -39,6 +39,6 @@ class OtherTest extends JUnit3Suite {
   def testIf2 = expect ("it's true 2 ...") { wdefif1 run 2 }
   def testIf3 = expect ("3 it's false ...") { wdefif1 run 3 }
 
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+  override def setUp () = { Gremlins.live() }
+  override def tearDown () = { Gremlins.die() }
 }

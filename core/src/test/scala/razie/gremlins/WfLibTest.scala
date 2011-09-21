@@ -39,8 +39,11 @@ class WfLibTest extends JUnit3Suite {
   def testwi1s = expect (2) { wf(wi1s) run 1 }
   def testwi1ss = expect (2) { wf(wf toDsl wi1) run 1 }
 //  
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp () = { Gremlins.live() }
+  override def tearDown () = { Gremlins.die() }
 
 }
 

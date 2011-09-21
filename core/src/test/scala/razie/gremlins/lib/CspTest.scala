@@ -24,7 +24,10 @@ class CspTest extends JUnit3Suite {
   def testmyp41  = expect (true) { ((myp41.print run "1").asInstanceOf[List[_]] contains "1-Q-P") }
   def testmyp41d = expect (true) { ((wf(wf toDsl myp41) run "1").asInstanceOf[List[_]] contains "1-Q-P") }
   
-  override def setUp () = { Gremlins.live }
-  override def tearDown () = { Gremlins.die }
+  // make sure it's the last test... - tests that there's no running processes
+  def testDie = expect (true) { Gremlins.kill() }
+
+  override def setUp () = { Gremlins.live() }
+  override def tearDown () = { Gremlins.die() }
 }
 

@@ -10,18 +10,18 @@ import junit.framework.TestSuite;
 import razie.actionables.test.ExecFactoryTest;
 
 /**
- * suite 
+ * suite
  * 
  * @author razvanc99
  */
-public class SuiteActionables extends TestSuite {
-    public static Test suite() {
-        TestSuite result = new TestSuite(SuiteActionables.class.getName());
-          
-        result.addTestSuite(ExecFactoryTest.class);
-        result.addTestSuite(TestActionables.class);
-
-        return result;
-    }
+public class SuiteActionables { //extends TestSuite {
+//  public static Test suite() {
+//    TestSuite result = new TestSuite(SuiteActionables.class.getName());
+//
+////    result.addTestSuite(ExecFactoryTest.class);
+////    result.addTestSuite(TestActionables.class);
+//
+//    return result;
+//  }
 
 }

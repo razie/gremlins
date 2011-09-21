@@ -56,9 +56,9 @@ class wfs {
   def strict(f: => WfActivity): WfActivity = WfaCollector.flagged ("strict") (f)
 
   /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
-  def seqf(f: (Any) => Any): WfActivity = sync (f)
+  def seqf(f: (Any) => Any): WfActivity = later (f)
   /** create leaf activity containing scala code. It cannot contain more activities */
-  def sync(f: (Any) => Any): WfActivity = w(f)
+//  def sync(f: (Any) => Any): WfActivity = w(f)
 //  def sync(f: => Unit): WfActivity = w(f)
   /** create leaf activity containing scala code. It cannot contain more activities */
   def async(f: (Any) => Any): WfActivity = w(f)
@@ -91,7 +91,7 @@ class wfs {
   //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
   def later(f: Any => Any): WfActivity = w(f)
-//  def later(f: => Unit): WfActivity = w(f)
+  def later(f: => Unit): WfActivity = w(f)
   def matchLater[B](f: PartialFunction[Any, B]) =
     new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
 

@@ -30,6 +30,6 @@ class GTest extends JUnit3Suite {
   println(wf toDsl myp11)
   def testmyp12 = expect (true) { (wf(wf toDsl myp11).print run "1").asInstanceOf[String] matches "snakked.*maki.*=1.*" }
   
-  override def setUp () = { Gremlins.live;  GAMAct.assetMgr = TestGAM }
-  override def tearDown () = { Gremlins.die }
+  override def setUp () = { Gremlins.live();  GAMAct.assetMgr = TestGAM }
+  override def tearDown () = { Gremlins.die() }
 }
