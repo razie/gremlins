@@ -27,7 +27,7 @@ object Gremlins {
   
   /** allow gremlins to live in the given engine */
   def liveInside (e:Engine) : Engine = synchronized { 
-    die()
+    kill()
     dflt = Some(e)
     dflt.get 
     }

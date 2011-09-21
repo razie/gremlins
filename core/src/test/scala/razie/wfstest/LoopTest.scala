@@ -100,9 +100,6 @@ class LoopTest extends JUnit3Suite {
     }
   //  def testwsp4 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp4, 1) }
 
-  // make sure it's the last test... - tests that there's no running processes
-  def testDie = expect (true) { razie.Gremlins.kill() }
-
   override def setUp() = { razie.Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { razie.Gremlins.die() }
 

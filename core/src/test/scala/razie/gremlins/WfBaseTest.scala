@@ -122,9 +122,6 @@ log($0)
      wf.assign("x", 3)
    }
 
-  // make sure it's the last test... - tests that there's no running processes
-  def testDie = expect (true) { Gremlins.kill() }
-
   override def setUp () = { Gremlins.live }
   override def tearDown () = { Gremlins.die() }
 }

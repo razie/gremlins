@@ -188,9 +188,6 @@ class ScalaWorkflowTest extends JUnit3Suite {
 // TODO  
 //  def testwfcl1 = expect ("1-a-b") { prun (wfa1, 1) }
   
-  // make sure it's the last test... - tests that there's no running processes
-  def testDie = expect (true) { Gremlins.kill() }
-
   override def setUp() = { Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { Gremlins.die() }
   

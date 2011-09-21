@@ -368,6 +368,8 @@ abstract class Engine extends Doer with EngineStrategy {
     t._1.id
   }
 
+  private def bubusync[T] (f: =>T) : T = synchronized {f}
+  
   private[this] def istart(id: GRef, startV: Any, async: Boolean): (Process, Actor) = {
     val p = processes.find(_.id == id) getOrElse (throw new IllegalArgumentException("Process not found id: " + id))
     p.lastV = startV
@@ -382,7 +384,7 @@ abstract class Engine extends Doer with EngineStrategy {
           receive {
             case Done(p) => {
               Audit.recDone(p, p.lastV)
-              processes -= p // maybe keep it around?
+              bubusync { processes -= p } // maybe keep it around?
             }
           }
           reply()
@@ -440,32 +442,35 @@ abstract class Engine extends Doer with EngineStrategy {
    *  @param forced if true, the processes will be killed
    *  @param timeout how long to wait in case anyone is still running - it will sleep in 250ms chunks so not to waste your time
    */
-  def stop(forced: Boolean = false, timeout: Int = 250) = synchronized {
-    var ok = true
-
+  def stop(forced: Boolean = false, timeout: Int = 250) = {
     // wait for all to be done, sleeping in CHUNKs up to a maximum
     val CHUNK = 250
     var spent = 0
-    while (!processes.isEmpty && spent < timeout) {
+    while (synchronized { !processes.isEmpty } && spent < timeout) {
       Thread.sleep(CHUNK)
       spent += CHUNK
     }
 
-    // try to kill what's left
-    if (!processes.isEmpty) {
-      if (forced) {
-        Log.alarm("there are still " + processes.size + " Processes in progress")
-        val tokill = processes.flatMap(_.currThreads)
-        Debug(">>>>>>>>>>>>>>>>3.killing " + tokill)
-        tokill map (_.currActor map (_.kill()))
-        ok = false
-      } else
-        throw new IllegalStateException("there are still " + processes.size + " Processes in progress")
-    }
+    var ok = true
 
-    stopped = true
-    pexit()
-    ok
+    synchronized {
+
+      // try to kill what's left
+      if (!processes.isEmpty) {
+        if (forced) {
+          Log.alarm("there are still " + processes.size + " Processes in progress")
+          val tokill = processes.flatMap(_.currThreads)
+          Debug(">>>>>>>>>>>>>>>>3.killing " + tokill)
+          tokill map (_.currActor map (_.kill()))
+          ok = false
+        } else
+          throw new IllegalStateException("there are still " + processes.size + " Processes in progress")
+      }
+
+      stopped = true
+      pexit()
+      ok
+    }
   }
 }
 

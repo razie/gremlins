@@ -37,9 +37,6 @@ class ChannelTest extends JUnit3Suite {
     res._1 > 2 * t
   }
 
-  // make sure it's the last test... - tests that there's no running processes
-  def testDie = expect(true) { Gremlins.kill() }
-
   override def setUp() = { Gremlins.live() }
   override def tearDown() = { Gremlins.die() }
 }

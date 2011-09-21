@@ -69,15 +69,15 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
     razie.Gremlins.liveInside (e)
     val ret = work
 //    Thread.sleep(1000 + noflows/3); 
-    razie.Gremlins.die (8000)
+    razie.Gremlins.die (2000)
     ret
   }
 
   override def setUp() = {
 //    com.razie.pub.base.log.Log.DEBUGGING = false
-    razie.Log.impl = new REALLYSILENTLOG
+//    razie.Log.impl = new REALLYSILENTLOG
 
-    com.razie.pub.base.log.Log.SILENT = true
+    razie.Log.silent(true)
   }
 }
 
