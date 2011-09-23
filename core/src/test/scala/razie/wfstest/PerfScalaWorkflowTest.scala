@@ -74,20 +74,6 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
   }
 
   override def setUp() = {
-//    com.razie.pub.base.log.Log.DEBUGGING = false
-//    razie.Log.impl = new REALLYSILENTLOG
-
     razie.Log.silent(true)
   }
 }
-
-class REALLYSILENTLOG extends razie.Log {
-  private def th = Thread.currentThread.getName + " "
-  override def trace(f: => Any) = {}
-  override def log(msg: String, t: Throwable = null) = {}
-  override def alarm(msg: String, t: Throwable = null) = println ("ALARM: " + th + msg, t)
-  override def audit(msg: String, t: Throwable = null) = {}
-  override def error(msg: String, t: Throwable = null) = { println("ERROR: " + th + msg, t); throw t }
-  override def silent (f:Boolean) {}
-}
-

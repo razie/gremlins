@@ -27,7 +27,7 @@ object WTimer extends WTimer {
  * TODO 1-1 feature persistency
  * TODO 3-1 nice expression for time
  */
-class WTimer extends WRes {
+class WTimer extends WRes with razie.Logging {
   override def key = WTimer.gref
 
   val waitlist = new ListQueue[WResRROK]()
@@ -62,7 +62,7 @@ class WTimer extends WRes {
         } else false
       }
     } catch {
-      case e@_ => razie.Log("while notifying requestor of reply: ", e)
+      case e@_ => log("while notifying requestor of reply: ", e)
     }
     figureOutNextWakeTime
   }
@@ -118,7 +118,7 @@ class WTimer extends WRes {
         } else false
       }
     } catch {
-      case e@_ => razie.Log("while notifying requestor of reply: ", e)
+      case e@_ => log("while notifying requestor of reply: ", e)
     }
 
     figureOutNextWakeTime

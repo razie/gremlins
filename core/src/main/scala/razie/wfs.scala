@@ -5,10 +5,43 @@
  */
 package razie
 
-import razie.base.{ ActionContext => AC }
-import razie.gremlins.{ WfActivity, WfaCollector, WFunc, WfExec, HasDsl }
+import java.lang.IllegalStateException
+
+import razie.base.{ActionContext => AC}
+import razie.gremlins.act.WfCase2ap
+import razie.gremlins.act.WfGroupBy
+import razie.gremlins.act.WfSliceMap
+import razie.gremlins.act.WfCase1
+import razie.gremlins.act.WfCase2
+import razie.gremlins.act.WfCase2a
+import razie.gremlins.act.WfCase2p
+import razie.gremlins.act.WfCaseAny1
+import razie.gremlins.act.WfCases1
+import razie.gremlins.act.WfDynIf
+import razie.gremlins.act.WfDynIfa
+import razie.gremlins.act.WfDynPar
+import razie.gremlins.act.WfDynSeq
+import razie.gremlins.act.WfFlatten
+import razie.gremlins.act.WfFoldLeft
+import razie.gremlins.act.WfGuard1
+import razie.gremlins.act.WfIf
+import razie.gremlins.act.WfLabelInsert
+import razie.gremlins.act.WfMap
+import razie.gremlins.act.WfMatch1
 import razie.gremlins.act.WfPar
-import razie.gremlins.act._
+import razie.gremlins.act.WfScala
+import razie.gremlins.act.WfScalaV0
+import razie.gremlins.act.WfScalaV1
+import razie.gremlins.act.WfScalaV1u
+import razie.gremlins.act.WfSort
+import razie.gremlins.act.WfeScala
+import razie.gremlins.act.WfeScalaV1
+import razie.gremlins.WFunc
+import razie.gremlins.$Expr
+import razie.gremlins.BExpr
+import razie.gremlins.WfActivity
+import razie.gremlins.WfExec
+import razie.gremlins.WfaCollector
 
 /** 
  * scala workflows - these are not nice because can't be serialized/distributed easily
@@ -64,6 +97,18 @@ class wfs {
   def async(f: (Any) => Any): WfActivity = w(f)
 //  def async(f: => Unit): WfActivity = w(f)
 
+  /** call a sub-process with a different startup value than $0 
+   * 
+   * @param e an expression evaluated in the context of THIS workflow
+   */
+  def call(e:$Expr) (f: => WfActivity): WfActivity = new WfsCall (e, f) // TODO not tested
+  
+  /** scala code with input and return values */
+  class WfsCall (val e:$Expr, val a:WfActivity) extends WfScalaV1 ((x)=>x) {
+      override def apply(in: AC, v: Any): Any = a.run (e.apply(in, v))
+    }
+
+  
   /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
   def seq(f: => Unit): WfActivity = new WfDynSeq(new WfeScala(f))
 
@@ -72,7 +117,7 @@ class wfs {
 
   /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started.
    * 
-   *  the body of the par is executed when the par node is started. at the end, all defined nodes will be started in sequence */
+   *  the body of the par is executed when the par node is started. at the end, all defined nodes will be started in parallel */
   def par(f: => Unit) = new WfDynPar(new WfeScala(f))
 
   //----------------- base activitities
@@ -91,7 +136,7 @@ class wfs {
   //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
   def later(f: Any => Any): WfActivity = w(f)
-  def later(f: => Unit): WfActivity = w(f)
+//  def later(f: => Unit): WfActivity = w(f)
   def matchLater[B](f: PartialFunction[Any, B]) =
     new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
 
@@ -102,6 +147,7 @@ class wfs {
   def assign(name: String) = wf.assign(name, wf.$0)
 
   def $(name: String) = wf.$(name)
+  def $0 = wf.$0
 
   //--------------------- simulating the let! from F# syntax
 
@@ -131,6 +177,7 @@ class wfs {
 
   implicit def wc0(cond: Boolean): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond }
   def wc1(cond: Any => Boolean): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) }
+  def wcAnd(cond: Any => Boolean) (wf:WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) && wf.apply(in, v) }
 
   def wif(cond: FB)(f: => Unit) = new WfDynIf(cond, f)
   def wif(cond: Cond1)(f: => Unit) = new WfDynIf(wc1(cond), f)
@@ -148,7 +195,7 @@ class wfs {
 
   class LString(name: String) {
     //    def label (f: => WfActivity) = wf.label(name, f)
-    def label(f: => WfActivity) = new WfLabelInsert(name) --> f
+    def label(f: => WfActivity) = new WfLabelInsert(name) --> noCollect { f }
   }
   implicit def toLString(label: String) = new LString(label)
 
@@ -177,6 +224,60 @@ class wfs {
 
     //    Seq(va, va1, head, i)
     vorigA --| va --| (head --> i)
+  }
+
+  val max:Int=100
+  
+  def doWhile (e: Any => Boolean) (body: => WfActivity) :WfActivity = 
+    doWhile (wc1(x => e(x))) (body) 
+  
+  def doWhile (e:WFunc[Boolean]) (body: => WfActivity) :WfActivity = "doWhile" label noCollect {
+    // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
+     // save the value
+//    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
+    var counter=0
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val bbody = { body } // TODO maybe collecting the body should not be strict?
+    
+    val xbody = wf seq Seq (
+      "next" label w { x => { counter = counter + 1; x} }
+//      "next" label w { x => (v.get.asInstanceOf[(Int, Any)]._1 + 1, x) }, // increment counter
+//      wf.wrap(new LetBangVarAssign(v)),
+//      "restore" label w { x => (x.asInstanceOf[(Int, Any)]._2) }
+      )
+    
+    bbody --| xbody --| loop
+    
+    val i = wfs strict { 
+      new WfDynIfa( wcAnd (x => { if (counter >=max) razie.Alarm ("MORE than max loops"); counter < max }) (e), bbody) welse done 
+//      new WfDynIfa( wcAnd (x => { v.get.asInstanceOf[(Int, Any)]._1 < max }) (e), bbody) welse done 
+      }
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+//    va --| ("p2" label w { x => (x.asInstanceOf[(Int, Any)]._2) }) --| (head --> i)
+    (head --> i)
+  }
+
+  def repeatUntil (e:BExpr) (body: => WfActivity) = "repeatUntil" label noCollect {
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val bbody = body
+    
+    bbody --> loop
+
+    val i = wfs strict { 
+      new WfDynIfa(e, bbody) welse done 
+      }
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+    (head --> i)
   }
 
   def wsmap[A, B](branches: Int)(f: A => B) = "wsmap" label noCollect {

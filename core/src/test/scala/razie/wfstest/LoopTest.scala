@@ -47,8 +47,8 @@ class LoopTest extends JUnit3Suite {
         later { fapp("b") _ }
       }
     }
-  def testwif1  = expect ("1-a-b") { prun (wif1, 1) }
-  def testwif1s = expect ("1-a-b") { prun (wfs strict wif1, 1) }
+  def testwif1  = expect ("1-a-b") { wif1 printAndRun 1 }
+  def testwif1s = expect ("1-a-b") { wfs strict wif1 printAndRun 1 }
 
   // foreach loop
   def wforeach1 =
@@ -59,16 +59,16 @@ class LoopTest extends JUnit3Suite {
       }
       w { _ => x } // another way to assign x to the default value
     }
-    def testwforeach1 = expect (6) { prun (wforeach1, List(1,2,3)) }
-    def testwforeach1s = expect (6) { prun (wfs strict wforeach1, List(1,2,3)) }
+    def testwforeach1 = expect (6) { wforeach1 printAndRun List(1,2,3) }
+    def testwforeach1s = expect (6) { wfs strict wforeach1 printAndRun List(1,2,3) }
 
   // parallel map
   def wsmap1 =
     seq {
       wsmap[Int,Int] (3) { x:Int => x + 1 }
     }
-    def testwsmap1 = expect (List(2,3,4)) { prun (wsmap1, List(1,2,3)) }
-    def testwsmap1s = expect (List(2,3,4)) { prun (wfs strict wsmap1, List(1,2,3)) }
+    def testwsmap1 = expect (List(2,3,4)) { wsmap1 printAndRun List(1,2,3) }
+    def testwsmap1s = expect (List(2,3,4)) { wfs strict wsmap1 printAndRun List(1,2,3) }
 
   // simplest loop
 //  def wmap1 =
@@ -102,16 +102,5 @@ class LoopTest extends JUnit3Suite {
 
   override def setUp() = { razie.Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { razie.Gremlins.die() }
-
-  // simplify running the workflow
-  def prun(p: razie.gremlins.WfActivity, s: Any) = {
-    val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
-    val out = razie.Gremlins().exec (p.print, s)
-    println ("============= RESULTS ===============")
-    p.print;
-    println ("context: " + ctx)
-    println ("value: " + out)
-    out
-  }
 
 }

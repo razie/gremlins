@@ -135,11 +135,16 @@ object wf extends WfBaseLib[WfActivity] {
 
   //  def split (a : WfActivity*) : WfActivity = new WfSelectMany (a:_*)
 
-  /** bound this subgraph in a scope, if needed */
+  /** bound this subgraph in a scope, ONLY if needed */
   def scope(a: WfActivity) = // optimization - if just one unconnected sub-graph, don't wrap in scope
-    // TODO optimize - if a is a scope with a single unconnected END, don't wrap again
     if (a.glinks.isEmpty) a
-    else new WfScope(a)
+    else {
+      // optimized - if a is a scope with a single unconnected END, don't wrap again
+      val ends = razie.g.Graphs.entire[WfActivity, WfLink](a).dag filterNodes { z => z.glinks.isEmpty }
+      if (ends.size == 1) a
+//      if (ends.size == 1 && ends.head.isInstanceOf[WfScopeEnd]) a
+      else new WfScope(a)
+    }
 
   //  implicit val linkFactory = (x,y) => WfLink(x,y)
 

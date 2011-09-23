@@ -25,7 +25,7 @@ import com.razie.pub.comms.Comms;
  * 
  * @author razvanc
  */
-class ExecTelnet extends razie.gremlins.JWFunc {
+class ExecTelnet extends razie.gremlins.JWFunc with razie.Logging {
 
 	def spec = new ActionableSpec(new AttrAccessImpl(
 			"host=localhost,port=21,cmd"), new AttrAccessImpl("result"));
@@ -44,16 +44,16 @@ class ExecTelnet extends razie.gremlins.JWFunc {
 			val instream = new DataInputStream(server.getInputStream());
 			val out = new PrintStream(server.getOutputStream());
 
-			Log.logThis("TELNET <" + host + ":" + port + "> SEND CMD: " + cmd);
+			log("TELNET <" + host + ":" + port + "> SEND CMD: " + cmd);
 			out.println(cmd);
 			if (newin.a("noread") == null)
 				result = Comms.readStream(instream);
 
-			Log.logThis("TELNET <" + host + ":" + port + "> REPLY: " + result);
+			log("TELNET <" + host + ":" + port + "> REPLY: " + result);
 
 		} catch {
 		   case ioe:IOException =>  {
-			  Log.logThis("TELNET <" + host + ":" + port + "> EXCEPTION: ", ioe);
+			  log("TELNET <" + host + ":" + port + "> EXCEPTION: ", ioe);
 			  ioe.printStackTrace();
 		   }
 		}

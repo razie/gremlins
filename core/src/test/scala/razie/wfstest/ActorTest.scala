@@ -34,17 +34,17 @@ class ActorTest extends JUnit3Suite {
       wsmap[Int, Int] (3) { x: Int => x + 1 }
     }
   def testthreads = expect (List(2, 3, 4)) {
-    using (new Engine with Threads) { prun (wfs strict wsmap1, List(1, 2, 3)) }
+    using (new Engine with Threads) { wfs strict wsmap1 printAndRun List(1, 2, 3) }
   }
 
   def testexecutors = expect (List(2, 3, 4)) {
-    using (new Engine with Executors) { prun (wfs strict wsmap1, List(1, 2, 3)) }
+    using (new Engine with Executors) { wfs strict wsmap1 printAndRun List(1, 2, 3) }
   }
 
   def testactors = expect (List(2, 3, 4)) {
     val e = new Engine with Actors
     using (e) {
-      val result = prun (wfs strict wsmap1, List(1, 2, 3))
+      val result = wfs strict wsmap1 printAndRun List(1, 2, 3)
       val m = e.asInstanceOf[Actors].maxActors
       println (m)
       assert (m > 2)
@@ -79,16 +79,5 @@ class ActorTest extends JUnit3Suite {
 
   override def setUp() = {}
   override def tearDown() = {}
-
-  // simplify running the workflow
-  def prun(p: razie.gremlins.WfActivity, s: Any) = {
-    val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
-    val out = razie.Gremlins().exec (p.print, s)
-    println ("============= RESULTS ===============")
-    p.print;
-    println ("context: " + ctx)
-    println ("value: " + out)
-    out
-  }
 
 }

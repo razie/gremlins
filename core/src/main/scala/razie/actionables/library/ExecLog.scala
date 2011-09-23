@@ -7,7 +7,6 @@ package razie.actionables.library;
 
 import razie.actionables.ActionableSpec;
 import razie.base._
-import com.razie.pub.base.log.Log;
 
 /**
  * log a message
@@ -22,7 +21,7 @@ class ExecLog extends razie.gremlins.JWFunc {
    override def apply(in:ActionContext, v:Any):Any = {
       val msg = in sa "msg"
   
-		Log logThis msg
+		razie Log msg
 
 		msg
 	}

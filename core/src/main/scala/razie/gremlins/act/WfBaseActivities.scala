@@ -72,8 +72,8 @@ class WfEnd(a: WfActivity*) extends WfSimple {
  * will point to the entry point of its sub-graph and connect the end of it to itself.
  */
 class WfScope(aa: WfActivity, var l: WfLink*) extends WfStart(aa) with HasDsl {
-  val x = new WfScopeEnd(aa, l: _*)
-  override def toString = super.toString + " --> " + x.toString
+  val end = new WfScopeEnd(aa, l: _*)
+  override def toString = super.toString + " --> " + end.toString
   override def toDsl = "scope " + (wf toDsl aa)
 }
 

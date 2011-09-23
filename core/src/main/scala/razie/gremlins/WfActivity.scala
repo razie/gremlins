@@ -10,6 +10,9 @@ import razie.base.{ ActionContext => AC }
 import razie.g._
 import razie.{ wf, gremlins }
 import razie.Gremlins
+import razie.gremlins.act.ProcState
+import razie.gremlins.act.ProcStatus
+import razie.gremlins.act.LinkState
 
 /** This is the basic node in the graph: an activity waiting to be traversed/executed.
  *
@@ -49,6 +52,15 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   // simplified execution
   def run(initialValue: Any): Any = Gremlins().exec(this, initialValue)
   def start(initialValue: Any): Any = Gremlins().start(this, initialValue)
+  def printAndRun(initialValue: Any) = {
+    val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
+    val out = razie.Gremlins().exec (this.print, initialValue)
+    println ("============= RESULTS ===============")
+    this.print;
+    println ("context: " + ctx)
+    println ("value: " + out)
+    out
+  }
 
   implicit val linkFactory: LFactory = (x, y) => new WfLink(x, y) // for the nice inherited --> operators 
 
@@ -63,6 +75,14 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def <--(z: WfActivity): WfActivity = z --> this
   def <-+(z: WfActivity): WfActivity = z +-> this
 
+  /** use this if you want to re-use a workflow... it is really not guaranteed to work in all scenarios */
+  def reset : WfActivity = {
+    procState = ProcState.CREATED
+    procStatus = ProcStatus.WHATEVER 
+    glinks map (l => { l.linkState = LinkState.CREATED; Option(l.z).map (_.reset)})
+    this
+  }
+  
   /** this will bind it to a parent in a DSL construct. Use this very carefully.
    *  Find usages by seeing who pushes self into WfaCollector
    */

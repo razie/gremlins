@@ -10,5 +10,6 @@
 	<classpathentry kind="lib" path="core/lib_managed/scala_2.9.1/compile/json-20090211.jar"/>
 	<classpathentry kind="lib" path="core/lib_managed/scala_2.9.1/compile/scalatest_2.9.1-1.6.1.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
+	<classpathentry kind="lib" path="core/lib_managed/scala_2.9.1/compile/slf4j-api-1.6.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

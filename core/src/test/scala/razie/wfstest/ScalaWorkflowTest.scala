@@ -34,9 +34,9 @@ class ScalaWorkflowTest extends JUnit3Suite {
   val wss3 = later (finc _)
   val wss4 = async (finc _)
   
-  def testwss2 = expect (1) { prun (wss2, 1) }
-  def testwss3 = expect (2) { prun (wss3, 1) }
-  def testwss4 = expect (2) { prun (wss4, 1) }
+  def testwss2 = expect (1) { wss2 printAndRun 1 }
+  def testwss3 = expect (2) { wss3 printAndRun 1 }
+  def testwss4 = expect (2) { wss4 printAndRun 1 }
 
   // sequence - note the laziness in the printed messages
   def wss7 = seq {
@@ -62,7 +62,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
     println ("------------------woohoo end")
   }
 
-  def testwss7 = expect ("1-a-b") { prun (wss7, 1) }
+  def testwss7 = expect ("1-a-b") { wss7 printAndRun 1 }
   def testwss9 = expect (3) { wss9.print run 1 }
 
   
@@ -82,7 +82,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
       println ("------------------woohoo end")
     }
 
-  def testwsp1 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp1, 1) }
+  def testwsp1 = expect (List("1-a", "1-b")) { razie.M anyOrder (wsp1 printAndRun 1) }
 
   // multilevel - simple scala code
   def wsp3 =
@@ -99,7 +99,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
         }
       }
     }
-  def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp3, 1) }
+  def testwsp3 = expect (List("1-a", "1-b")) { razie.M anyOrder (wsp3 printAndRun 1) }
 
   // multilevel - workflow built and then ran: 
   // the woohoo is now invoked as a separate activity and others may cut in - note the sequence of messages is likely different
@@ -117,7 +117,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
         }
       }
     }
-  def testwsp4 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp4, 1) }
+  def testwsp4 = expect (List("1-a", "1-b")) { razie.M anyOrder (wsp4 printAndRun 1) }
 
   // strict - see the two distinct passes: one runs through the code to build the "later" lazy workflow
   // second pass runs those activities
@@ -134,7 +134,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
         }
       }
     }
-  def testwsp5 = expect (List("1-a", "1-b")) { razie.M anyOrder prun (wsp5, 1) }
+  def testwsp5 = expect (List("1-a", "1-b")) { razie.M anyOrder (wsp5 printAndRun 1) }
 
   // multilevel
   def wsp2 =
@@ -170,7 +170,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
       foldLeft[String] ("folded:") (_ + "," + _)
     }
 
-  def testwsp2 = expect ("folded:,1-a,1-b,1-a,1-b") { prun (wsp2, 1) }
+  def testwsp2 = expect ("folded:,1-a,1-b,1-a,1-b") { wsp2 printAndRun 1 }
 
   // just a DSL example of simulating the let! from F#
   def wfa1 = seq {
@@ -178,7 +178,7 @@ class ScalaWorkflowTest extends JUnit3Suite {
     matchLater { case _ => a.get + "-b" }
   }
   
-  def testwfa1 = expect ("1-a-b") { prun (wfa1, 1) }
+  def testwfa1 = expect ("1-a-b") { wfa1 printAndRun 1 }
   
   // can't define activities in a sync/async leaf
   def wfcl1 = w {
@@ -190,12 +190,4 @@ class ScalaWorkflowTest extends JUnit3Suite {
   
   override def setUp() = { Gremlins.liveInside (new Engine with Threads) }
   override def tearDown() = { Gremlins.die() }
-  
-  // simplify running the workflow
-  def prun(p: razie.gremlins.WfActivity, s: Any) = {
-    val out = p.print run 1;
-    p.print;
-    out
-  }
-
 }

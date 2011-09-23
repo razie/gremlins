@@ -76,7 +76,7 @@ case class BCMP1 (a:BExpr, s:String, b:BExpr) extends BExpr (a.toDsl+" "+s+" "+b
      }
 
 /** simple boolean expression */
-case class BCMP2  (a:AExpr, s:String, b:AExpr) extends BExpr (a.toDsl+" "+s+" "+b.toDsl) {
+case class BCMP2  (a:AExpr, s:String, b:Expr[Any]) extends BExpr (a.toDsl+" "+s+" "+b.toDsl) {
      override def apply (in:AC, v:Any) = s match {
         case "==" => a(in, v) == b(in, v)
         case "!=" => a(in, v) != b(in, v)

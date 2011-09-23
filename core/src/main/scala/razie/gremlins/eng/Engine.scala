@@ -5,7 +5,7 @@
  */
 package razie.gremlins.eng
 
-import razie.{ AA, Debug, Log }
+import razie.{ AA }
 import razie.base.{ ActionContext => AC }
 import razie.g._
 import scala.actors._
@@ -13,6 +13,7 @@ import com.razie.pubstage.life._
 import razie.gremlins._
 import razie.gremlins.act._
 import razie.wf
+import razie.Logging
 
 //-------------------- graph processing engine
 
@@ -62,7 +63,7 @@ class PTState(start: WfActivity, startValue: Any, startLink: Option[WfLink]) {
  */
 class ProcessThread(
   val parent: Process, start: WfActivity, startLink: Option[WfLink],
-  val ctx: AC, startValue: Any) extends PTState(start, startValue, startLink) {
+  val ctx: AC, startValue: Any) extends PTState(start, startValue, startLink) with Logging {
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
 
   protected def preProcessing = {
@@ -108,7 +109,7 @@ class ProcessThread(
     } catch {
       case s @ _ => {
         // exception - just pick the first link out
-        razie.Log.alarm("Exception while executing WfActivity:", s)
+        error("Exception while executing WfActivity:", s)
         s.printStackTrace()
         (currV, currAct.glinks.headOption.toList)
       }
@@ -142,7 +143,7 @@ class ProcessThread(
     (currV, ret)
   }
 
-  def done(): Boolean = { val b = nextAct == null; Debug("done: " + b); b }
+  def done(): Boolean = { val b = nextAct == null; debug("done: " + b); b }
 }
 
 /** a process instance encapsulates the state of the running workflow
@@ -152,7 +153,7 @@ class ProcessThread(
  *
  *  I don't think the history should be kept, unless we're running in some sort of "debug" or "audit" mode.
  */
-class Process(val start: WfActivity, startV: Any, val ctx: AC) {
+class Process(val start: WfActivity, startV: Any, val ctx: AC) extends Logging {
   val id = GRef.id("WfProcess", GRef.uid)
   var lastV = startV
 
@@ -168,7 +169,7 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
     synchronized {
       lastV = v
     }
-    Debug("execAndAdvance() lastV == " + lastV)
+    debug("execAndAdvance() lastV == " + lastV)
   }
 
   // if ran sync, theaads list is relevant . when async, count is relevant
@@ -194,7 +195,8 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) {
 }
 
 /** the engine is more complicated in this case, basically graph traversal */
-abstract class Engine extends Doer with EngineStrategy {
+abstract class Engine extends Doer with EngineStrategy with Logging {
+  override protected val logger = newlog (classOf[Engine])
 
   val processes = new scala.collection.mutable.ListBuffer[Process]()
   var stopped = false
@@ -245,9 +247,9 @@ abstract class Engine extends Doer with EngineStrategy {
             t.currReq = Some(
               new WRes.Req(cback, re.tok, re.what, re.attrs, re.value(t.ctx, t.currV)))
 
-            Debug("ENG.Req: " + t.currReq.get)
+            debug("ENG.Req: " + t.currReq.get)
             val rep = re.req(t.currReq.get)
-            Debug("ENG.Req returned: " + rep)
+            debug("ENG.Req returned: " + rep)
             rep match {
               case ok @ Some(WResRROK(w, tok, r))  => psend(Reply(p, t, ok.get, a))
               case er @ Some(WResRRERR(w, tok, e)) => psend(Reply(p, t, er.get, a))
@@ -267,13 +269,13 @@ abstract class Engine extends Doer with EngineStrategy {
             {
               cact match {
                 case co: WfSkip => { // cancel a target
-                  Debug("ENG.skip")
+                  debug("ENG.skip")
 
                   // try right here, maybe we're lucky - otherwise we may miss this one due to competing threads
                   val target = co.target
                   target.synchronized { // I don't suppose this is going to get me in trouble, is it?
                     if (target.procState == ProcState.CREATED) {
-                      Debug("ENG.preempt.skipping: " + target)
+                      debug("ENG.preempt.skipping: " + target)
                       target.procState = ProcState.DONE
                       target.procStatus = ProcStatus.SKIPPED
                     }
@@ -288,10 +290,13 @@ abstract class Engine extends Doer with EngineStrategy {
               p.synchronized {
                 p setThreadCount (s.size - 1) // TODO really?
                 p.currThreads = p.currThreads.filter(!s.contains(_)) ++ s
-                Debug(">>> new waveline: " + p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = " + p.getThreadCount)
+                //                trace(">>> new waveline: " + p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = " + p.getThreadCount)
+                debug(">>> new waveline: %s - threadCount = %s".format(
+                  p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")),
+                  p.getThreadCount))
                 // TODO err if first action on only thread is REQ then it will finish before reply
                 if (p.done) {
-                  Debug("DOOOOOOOOOOOOOOOOOOONE");
+                  trace("DOOOOOOOOOOOOOOOOOOONE");
                   a ! Done(p)
                   assert(s.size == 0)
                 } // how to return the value?
@@ -304,9 +309,9 @@ abstract class Engine extends Doer with EngineStrategy {
 
       // reply from resource - continue original thread
       case Reply(p, t, rr, a) => {
-        Debug("ENG.Reply: " + rr)
+        debug("ENG.Reply: " + rr)
         if (t.done)
-          razie.Warn("WfResReq DUPLICATE - the wfthread is done... " + rr)
+          warn("WfResReq DUPLICATE - the wfthread is done... " + rr)
         else t.nextAct match {
           case re: WfResReply => {
             t.currReq = None
@@ -320,20 +325,20 @@ abstract class Engine extends Doer with EngineStrategy {
       }
 
       case Skip(p, _, a, target) => {
-        Debug("ENG.skipping: " + target)
+        debug("ENG.skipping: " + target)
         // TODO 2-2 identify target thread only and lock that one
         target.synchronized {
-          Debug(">>>>>>>>>>>>>>>>1.killing " + target.procState)
+          trace(">>>>>>>>>>>>>>>>1.killing " + target.procState)
           target.procState match {
-            case ProcState.DONE => Debug("--already DONE")
+            case ProcState.DONE => trace("--already DONE")
             // TODO 1-2 find thread and kill it
             case x @ ProcState.INPROGRESS => {
               target.procStatus = ProcStatus.SKIPPED
               val tokill = p.currThreads.filter(kk => {
-                Debug(">>>>>>>>>>>>>>>>2.killing " + kk.currAct.key + "-" + target.key)
+                trace(">>>>>>>>>>>>>>>>2.killing " + kk.currAct.key + "-" + target.key)
                 kk.currAct.key == target.key
               }).headOption
-              Debug(">>>>>>>>>>>>>>>>3.killing " + tokill)
+              trace(">>>>>>>>>>>>>>>>3.killing " + tokill)
               tokill map (_.currActor map (_.kill()))
             }
             case ProcState.CREATED => {
@@ -368,8 +373,8 @@ abstract class Engine extends Doer with EngineStrategy {
     t._1.id
   }
 
-  private def bubusync[T] (f: =>T) : T = synchronized {f}
-  
+  private def bubusync[T](f: => T): T = synchronized { f }
+
   private[this] def istart(id: GRef, startV: Any, async: Boolean): (Process, Actor) = {
     val p = processes.find(_.id == id) getOrElse (throw new IllegalArgumentException("Process not found id: " + id))
     p.lastV = startV
@@ -458,9 +463,9 @@ abstract class Engine extends Doer with EngineStrategy {
       // try to kill what's left
       if (!processes.isEmpty) {
         if (forced) {
-          Log.alarm("there are still " + processes.size + " Processes in progress")
+          error("there are still " + processes.size + " Processes in progress")
           val tokill = processes.flatMap(_.currThreads)
-          Debug(">>>>>>>>>>>>>>>>3.killing " + tokill)
+          warn(">>>>>>>>>>>>>>>>3.killing " + tokill)
           tokill map (_.currActor map (_.kill()))
           ok = false
         } else
