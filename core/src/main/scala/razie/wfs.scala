@@ -1,4 +1,4 @@
-/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+/** ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -6,8 +6,7 @@
 package razie
 
 import java.lang.IllegalStateException
-
-import razie.base.{ActionContext => AC}
+import razie.base.{ ActionContext => AC }
 import razie.gremlins.act.WfCase2ap
 import razie.gremlins.act.WfGroupBy
 import razie.gremlins.act.WfSliceMap
@@ -42,42 +41,43 @@ import razie.gremlins.BExpr
 import razie.gremlins.WfActivity
 import razie.gremlins.WfExec
 import razie.gremlins.WfaCollector
+import razie.gremlins.lib.CSP
+import razie.gremlins.lib.WfChannel
 
-/** 
- * scala workflows - these are not nice because can't be serialized/distributed easily
- * 
- * NOTE the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
- * 
- * Lazy Example: 
- * {{{  
- * def workflow = seq {    
- *   par {      
- *     seq {      
+/** scala workflows - these are not nice because can't be serialized/distributed easily
+ *
+ *  NOTE the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
+ *
+ *  Lazy Example:
+ *  {{{
+ *  def workflow = seq {
+ *   par {
+ *     seq {
  *       println ("he he - definition time")
  *       async { _ + "runtime-a" }
  *       }
  *     async { _ + "runtime-b" }
  *     }
  *     sort[String] (_ < _)
- *    later { case x : List[String] => x mkString "," }  
+ *    later { case x : List[String] => x mkString "," }
  *    }
- * }}}
- * 
- * The body of the different nodes are executed as the nodes are run!
- * 
- * Strict Example: 
- * {{{  
- * val strict_workflow = wfs strict workflow // that's why workflow above is a def not a val
- * }}}
- * 
- * The ENTIRE body is executed once, like the constructor of a class. only specially marked statements 
- * become nodes in the workflow...those prefixed by a keyword in this object.
- * 
- * The workflow then built can be run at will, once! You can build it again and again wihta def instead of val.
- * 
- * As a general rule, each node gets an input value and returns an output value. The "par" will create a list.
- * 
- * @author razvanc
+ *  }}}
+ *
+ *  The body of the different nodes are executed as the nodes are run!
+ *
+ *  Strict Example:
+ *  {{{
+ *  val strict_workflow = wfs strict workflow // that's why workflow above is a def not a val
+ *  }}}
+ *
+ *  The ENTIRE body is executed once, like the constructor of a class. only specially marked statements
+ *  become nodes in the workflow...those prefixed by a keyword in this object.
+ *
+ *  The workflow then built can be run at will, once! You can build it again and again wihta def instead of val.
+ *
+ *  As a general rule, each node gets an input value and returns an output value. The "par" will create a list.
+ *
+ *  @author razvanc
  */
 class wfs {
   import razie.wf
@@ -85,30 +85,44 @@ class wfs {
   // shortcut for nocolelct -  don't collect these activities. Collection is a hack for the workflow DSL
   def noCollect[T](f: => T): T = WfaCollector.noCollect (f)
 
+  /** do not collect the contents, just the result */
+  def collectOne(f: => WfActivity): WfActivity = {
+    val body = noCollect {
+      f
+    }
+    WfaCollector.current.map { _ collect body }
+    body
+  }
+
+  /** do not collect the contents, just the result */
+  def resultOf(f: => WfActivity): Unit = collectOne (f)
+
   /** interpret this workflow definition right now, not later */
   def strict(f: => WfActivity): WfActivity = WfaCollector.flagged ("strict") (f)
 
   /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
   def seqf(f: (Any) => Any): WfActivity = later (f)
   /** create leaf activity containing scala code. It cannot contain more activities */
-//  def sync(f: (Any) => Any): WfActivity = w(f)
-//  def sync(f: => Unit): WfActivity = w(f)
+  //  def sync(f: (Any) => Any): WfActivity = w(f)
+  //  def sync(f: => Unit): WfActivity = w(f)
   /** create leaf activity containing scala code. It cannot contain more activities */
   def async(f: (Any) => Any): WfActivity = w(f)
-//  def async(f: => Unit): WfActivity = w(f)
+  //  def async(f: => Unit): WfActivity = w(f)
 
-  /** call a sub-process with a different startup value than $0 
-   * 
-   * @param e an expression evaluated in the context of THIS workflow
+  /** call a sub-process with a different startup value than $0
+   *
+   *  @param e an expression evaluated in the context of THIS workflow
    */
-  def call(e:$Expr) (f: => WfActivity): WfActivity = new WfsCall (e, f) // TODO not tested
+  def call(e: $Expr)(f: => WfActivity): WfActivity = new WfsCall(e, f) // TODO not tested
+  def call(f: => WfActivity): WfActivity = new WfsCall($0, f) // TODO not tested
   
-  /** scala code with input and return values */
-  class WfsCall (val e:$Expr, val a:WfActivity) extends WfScalaV1 ((x)=>x) {
-      override def apply(in: AC, v: Any): Any = a.run (e.apply(in, v))
-    }
+  def scall(a: => WfActivity) = noCollect {a}.run ("kk")
 
-  
+  /** scala code with input and return values */
+  class WfsCall(val e: $Expr, val a: WfActivity) extends WfScalaV1((x) => x) {
+    override def apply(in: AC, v: Any): Any = a.run (e.apply(in, v))
+  }
+
   /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
   def seq(f: => Unit): WfActivity = new WfDynSeq(new WfeScala(f))
 
@@ -116,8 +130,9 @@ class wfs {
   //  def seq(f: => WfDynPar) = new WfDynSeq(new WfeScala(f))
 
   /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started.
-   * 
-   *  the body of the par is executed when the par node is started. at the end, all defined nodes will be started in parallel */
+   *
+   *  the body of the par is executed when the par node is started. at the end, all defined nodes will be started in parallel
+   */
   def par(f: => Unit) = new WfDynPar(new WfeScala(f))
 
   //----------------- base activitities
@@ -136,11 +151,11 @@ class wfs {
   //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
   def later(f: Any => Any): WfActivity = w(f)
-//  def later(f: => Unit): WfActivity = w(f)
+  //  def later(f: => Unit): WfActivity = w(f)
   def matchLater[B](f: PartialFunction[Any, B]) =
     new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
 
-//  def apply(f: => Unit) = w(f)
+  //  def apply(f: => Unit) = w(f)
   def apply(f: Any => Any) = w(f)
 
   /** assign name in context to the last value produced by the previous activity */
@@ -177,7 +192,8 @@ class wfs {
 
   implicit def wc0(cond: Boolean): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond }
   def wc1(cond: Any => Boolean): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) }
-  def wcAnd(cond: Any => Boolean) (wf:WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) && wf.apply(in, v) }
+  def wcAnd(cond: Any => Boolean)(wf: WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) && wf.apply(in, v) }
+  def wcnot(wf: WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = !wf.apply(in, v) }
 
   def wif(cond: FB)(f: => Unit) = new WfDynIf(cond, f)
   def wif(cond: Cond1)(f: => Unit) = new WfDynIf(wc1(cond), f)
@@ -213,11 +229,13 @@ class wfs {
       "next" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
       wf.wrap(new LetBangVarAssign(v)),
       "restore" label w { x => vorig.get } // restore the list
-)
+      )
     body --> loop
-    val i = wfs strict { new WfDynIfa(
-      wc1(x => { v.get.asInstanceOf[Int] < vorig.get.asInstanceOf[List[T]].size }),
-      body) welse done }
+    val i = wfs strict {
+      new WfDynIfa(
+        wc1(x => { v.get.asInstanceOf[Int] < vorig.get.asInstanceOf[List[T]].size }),
+        body) welse done
+    }
 
     // after the if is built, redirect end to head
     loop --> head
@@ -226,59 +244,33 @@ class wfs {
     vorigA --| va --| (head --> i)
   }
 
-  val max:Int=100
-  
-  def doWhile (e: Any => Boolean) (body: => WfActivity) :WfActivity = 
-    doWhile (wc1(x => e(x))) (body) 
-  
-  def doWhile (e:WFunc[Boolean]) (body: => WfActivity) :WfActivity = "doWhile" label noCollect {
-    // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
-     // save the value
-//    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
-    var counter=0
-    val head = wf.label ("head", wf.nop)
-    val loop = wf.label ("loop", wf.stop(1))
-    val done = wf.label ("done", wf.stop(1))
-    val bbody = { body } // TODO maybe collecting the body should not be strict?
-    
-    val xbody = wf seq Seq (
-      "next" label w { x => { counter = counter + 1; x} }
-//      "next" label w { x => (v.get.asInstanceOf[(Int, Any)]._1 + 1, x) }, // increment counter
-//      wf.wrap(new LetBangVarAssign(v)),
-//      "restore" label w { x => (x.asInstanceOf[(Int, Any)]._2) }
-      )
-    
-    bbody --| xbody --| loop
-    
-    val i = wfs strict { 
-      new WfDynIfa( wcAnd (x => { if (counter >=max) razie.Alarm ("MORE than max loops"); counter < max }) (e), bbody) welse done 
-//      new WfDynIfa( wcAnd (x => { v.get.asInstanceOf[(Int, Any)]._1 < max }) (e), bbody) welse done 
-      }
+  val max: Int = 100
 
-    // after the if is built, redirect end to head
-    loop --> head
-
-//    va --| ("p2" label w { x => (x.asInstanceOf[(Int, Any)]._2) }) --| (head --> i)
-    (head --> i)
+  /** build the equivalent construct of an actor: a loop reading from a queue, until the body's result evaluates the condition to false
+   *
+   *  NOTE that the body needs to respect the reset() because it will loop
+   *
+   *  NOTE if you want to have body behave like an actor (not read from default but wait on a channel), then use a channel yourself, see the PingPong parallel sample, in samples
+   *
+   *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
+   *  @param body the body of the actor
+   */
+  def actWhile(e: Any => Boolean)(body: => WfActivity): WfActivity = "actUntil" label noCollect {
+    repeatUntil (!e(_)) {
+      //      (channel ? body)
+      body
+    } + wf.stash (wf.log ("actUntil loop is completed"))
   }
 
-  def repeatUntil (e:BExpr) (body: => WfActivity) = "repeatUntil" label noCollect {
-    val head = wf.label ("head", wf.nop)
-    val loop = wf.label ("loop", wf.stop(1))
-    val done = wf.label ("done", wf.stop(1))
-    val bbody = body
-    
-    bbody --> loop
+  def doWhile(e: Any => Boolean)(body: => WfActivity): WfActivity =
+    doWhile (wc1(x => e(x))) (body)
 
-    val i = wfs strict { 
-      new WfDynIfa(e, bbody) welse done 
-      }
+  def doWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.doWhile(e)(body)
 
-    // after the if is built, redirect end to head
-    loop --> head
+  def repeatUntil(e: Any => Boolean)(body: => WfActivity): WfActivity =
+    repeatUntil (wc1(x => e(x))) (body)
 
-    (head --> i)
-  }
+  def repeatUntil(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.repeatUntil(e)(body)
 
   def wsmap[A, B](branches: Int)(f: A => B) = "wsmap" label noCollect {
     val p = seq {
@@ -292,11 +284,13 @@ class wfs {
           }))(f)
       }
       // sort the lists
-      w { x => {
-        val v = x.asInstanceOf[List[(Int, List[B])]]
-        val r = v.sortWith ((a,b) => a._1 < b._1)
-        r map (_._2)
-      }}
+      w { x =>
+        {
+          val v = x.asInstanceOf[List[(Int, List[B])]]
+          val r = v.sortWith ((a, b) => a._1 < b._1)
+          r map (_._2)
+        }
+      }
       new WfFlatten[B]
     }
     p
@@ -321,7 +315,7 @@ class wfs {
       "next" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
       wf.wrap(new LetBangVarAssign(v)),
       "restore" label w { x => vorig.get } // restore the list
-)
+      )
     body --> loop
     val i = new WfDynIfa(
       wc1(x => { v.get.asInstanceOf[Int] < vorig.get.asInstanceOf[List[T]].size }),
@@ -350,7 +344,7 @@ class wfs {
       "2" label w { x => v.get.asInstanceOf[Int] + 1 }, // increment counter
       wf.wrap(new LetBangVarAssign(v)),
       "3" label w { x => v1.get } // restore the list
-)
+      )
     body --> loop
     val i = new WfDynIfa(
       wc1(x => { v.get.asInstanceOf[Int] <= wf.$0.asInstanceOf[List[T]].size }),
@@ -419,12 +413,11 @@ class LetBangVar(val name: String) {
 
 object wfs extends wfs
 
-/** 
- * scala workflow tests - these are not nice because can't be serialized/distributed easily
- * 
- * Note the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
- * 
- * @author razvanc
+/** scala workflow tests - these are not nice because can't be serialized/distributed easily
+ *
+ *  Note the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
+ *
+ *  @author razvanc
  */
 object wft extends wfs {
   def apply(f: => Unit) = w(f)

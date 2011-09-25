@@ -16,7 +16,7 @@ import razie.gremlins.act.LinkState
 
 /** This is the basic node in the graph: an activity waiting to be traversed/executed.
  *
- *  The workflow is modelled as a graph of activities connected by links/dependencies.
+ *  The workflow is modelled as a graph of activities connected by links/dependencies. NOTE that it may have cycles so you should always use the dag method when traversing...
  *
  *  Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
@@ -68,7 +68,8 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
 
   /** bound: point all leafs to z, an end node, while avoiding z --> z */
   def --|(z: WfActivity)(implicit linkFactory: LFactory) = {
-    (razie.g.Graphs.filterNodes[WfActivity, WfLink](this) { a => a.glinks.isEmpty && a != z }) foreach (i => i +-> z)
+    // find all distinct leafs and connect them to z distint because 1->2->4 and 1->3->4
+    (this.dag filterNodes { a => a.glinks.isEmpty && a != z }).distinct foreach (i => i +-> z)
     this
   }
 
@@ -82,7 +83,10 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
     glinks map (l => { l.linkState = LinkState.CREATED; Option(l.z).map (_.reset)})
     this
   }
-  
+
+  /** wrap this into a graph that protects against stack overflow while traversing cycles */
+  def dag = razie.g.Graphs.entire[WfActivity, WfLink](this).dag
+      
   /** this will bind it to a parent in a DSL construct. Use this very carefully.
    *  Find usages by seeing who pushes self into WfaCollector
    */

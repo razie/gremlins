@@ -63,8 +63,7 @@ class WfStart(a: WfActivity*) extends WfSimple { a map (this --> _) }
 /** sub-graph end, control node: find all ends of subgraph and point to this end */
 class WfEnd(a: WfActivity*) extends WfSimple {
   // find all distinct leafs and connect them to me distint because 1->2->4 and 1->3->4
-  (a flatMap (x => razie.g.Graphs.entire[WfActivity, WfLink](x).dag filterNodes { z => z.glinks.isEmpty })).distinct foreach (i => i +-> this)
-//  (a flatMap (x => razie.g.Graphs.filterNodes[WfActivity, WfLink](x) { z => z.glinks.isEmpty })).distinct foreach (i => i +-> this)
+  (a flatMap (x => x.dag filterNodes { z => z.glinks.isEmpty })).distinct foreach (i => i +-> this)
 }
 
 /** 
@@ -325,7 +324,7 @@ class WfDynSeq(a: WfExec) extends WfSeq() with WfaCollected {
 
     // construct with the colected
     //lb map (this + _)
-    razie.Debug ("Collected: " + lb)
+    razie.Debug (this + "Collected: " + lb)
 
     if (lb.size > 0) {
       razie.Debug ("Old dynamic sub-graph... follows:" + this.mkString);
@@ -376,9 +375,9 @@ class WfDynPar(a: WfExec) extends WfPar() with WfaCollected {
     }
     // construct with the colected
     //lb map (this + _)
-    razie.Debug ("Collected: " + lb)
+    razie.Debug ("%s Collected: %s".format(this, lb))
     if (lb.size > 0) {
-      razie.Debug ("Old dynamic sub-graph... follows:" + this.mkString)
+      razie.Debug ("... Old dynamic sub-graph... follows:" + this.mkString)
       //decouple AJ from me
       aj.incoming = Nil
       glinks = Nil
@@ -389,12 +388,12 @@ class WfDynPar(a: WfExec) extends WfPar() with WfaCollected {
 
       if (!WfaCollector.isFlag("strict").isDefined) {
         // this is runtime so aj needs rebuild cache
-        (razie.g.Graphs.filterNodes[WfActivity, WfLink](this) { a =>
+        (this.dag filterNodes { a =>
           a.glinks.headOption.map(_.z.key == aj.key).getOrElse(false)
         }) foreach (n => aj addIncoming n.glinks.head)
       }
 
-      razie.Debug ("New dynamic sub-graph... follows:" + this.mkString)
+      razie.Debug ("... New dynamic sub-graph... follows:" + this.mkString)
       (out, glinks)
     } else
       (out, glinks)

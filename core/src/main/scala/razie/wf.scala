@@ -1,4 +1,4 @@
-/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+/** ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -10,21 +10,20 @@ import razie.gremlins._
 import razie.gremlins.lib._
 import razie.gremlins.act._
 
-/** 
- * these are the final nice wrappers for all the basic activities
- * 
- * NOTE the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
- * 
- * TODO study 5 will settle the underlying workflow engine - there were some details not working in study4,
- * especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
- * up the simplicity of the traversing engine.
- * 
- * I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect 
- * the graph through its actions...this way there's no change in the engine - it remains simple graph 
- * traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced 
- * with WfScope)
- * 
- * @author razvanc
+/** these are the final nice wrappers for all the basic activities
+ *
+ *  NOTE the wf and wfs are two different gremlin worlds and should not be mixed. Import one xor the other
+ *
+ *  TODO study 5 will settle the underlying workflow engine - there were some details not working in study4,
+ *  especially arround scopes (WfProxy contents)...to fix that I had to invent the WfScope but that messed
+ *  up the simplicity of the traversing engine.
+ *
+ *  I chose to solve these by changing WfProxy's behaviour to not just proxy exec but instead redirect
+ *  the graph through its actions...this way there's no change in the engine - it remains simple graph
+ *  traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced
+ *  with WfScope)
+ *
+ *  @author razvanc
  */
 object wf extends WfBaseLib[WfActivity] {
 
@@ -36,7 +35,7 @@ object wf extends WfBaseLib[WfActivity] {
 
   def toDsl(x: AnyRef) = x match {
     case a: HasDsl => a.toDsl
-    case _ => throw new IllegalArgumentException("x not HasDsl cls=" + x.getClass.getName)
+    case _         => throw new IllegalArgumentException("x not HasDsl cls=" + x.getClass.getName)
   }
 
   import razie.gremlins.res.WTimer
@@ -142,7 +141,7 @@ object wf extends WfBaseLib[WfActivity] {
       // optimized - if a is a scope with a single unconnected END, don't wrap again
       val ends = razie.g.Graphs.entire[WfActivity, WfLink](a).dag filterNodes { z => z.glinks.isEmpty }
       if (ends.size == 1) a
-//      if (ends.size == 1 && ends.head.isInstanceOf[WfScopeEnd]) a
+      //      if (ends.size == 1 && ends.head.isInstanceOf[WfScopeEnd]) a
       else new WfScope(a)
     }
 
@@ -156,5 +155,60 @@ object wf extends WfBaseLib[WfActivity] {
       a
     } else
       new WfScope(a, l: _*)
+
+  class LString(name: String) {
+    //    def label (f: => WfActivity) = wf.label(name, f)
+    def label(f: => WfActivity) = new WfLabelInsert(name) --> wfs.noCollect { f }
+  }
+  implicit def toLString(label: String): LString = new LString(label)
+
+  val MAX = 1000
+
+  def doWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = "doWhile" label wfs.noCollect {
+    // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
+    // save the value
+    //    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
+    var counter = 0
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.stop(1))
+    val done = wf.label ("done", wf.stop(1))
+    val bbody = { body } // TODO maybe collecting the body should not be strict?
+
+    val xbody = wf seq Seq (
+      "inc counter" label wfs.w { x => { counter = counter + 1; x } })
+
+    bbody --| xbody --| loop
+
+    val i = wfs strict {
+      new WfDynIfa(wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (e), bbody) welse done
+    }
+
+    // after the if is built, redirect end to head
+    loop --> head
+
+    (head --> i)
+  }
+
+  def repeatUntil(e: WFunc[Boolean])(body: => WfActivity): WfActivity = "repeatUntil" label wfs.noCollect {
+    // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
+    // save the value
+    //    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
+    var counter = 0
+    val head = wf.label ("head", wf.nop)
+    val loop = wf.label ("loop", wf.nop)
+    val done = wf.label ("done", wf.stop(1))
+    val bbody = { body } // TODO maybe collecting the body should not be strict?
+
+    val xbody = wf seq Seq (
+      "inc counter" label wfs.w { x => { counter = counter + 1; x } })
+
+    val i = wfs strict {
+      new WfDynIfa(wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (wfs.wcnot(e)), loop) welse done
+    }
+
+    loop --> head
+    // after the if is built, connect them
+    head --> bbody --| xbody --| i
+  }
 
 }

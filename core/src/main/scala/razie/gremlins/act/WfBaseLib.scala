@@ -52,9 +52,11 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
   def dec(i: Int = 1) = me wrap new WfeDec(WCFExpr parseAExpr i.toString)
   def dec: T = dec(1)
   def set(i: Any) = me wrap new WfeSet(WCFExpr parseAExpr i.toString)
+  def set(i: AExpr) = me wrap new WfeSet(i)
 
   /** log result of expression */
   def log(m: AExpr) = me wrap new WfeLog(m)
+  def log(m: String) = me wrap new WfeLog(new AExpr(m))
 
   /** assign result of expression to name in context */
   def assign(name: String, e: AExpr) = me wrap new WfeAssign(name, e)
@@ -70,7 +72,14 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
   // TODO don't rebuild only to parse again
   def act(t: (String, String, String)): T = act(t._1 + ":" + t._2 + "(" + t._3 + ")")
 
+/** stop the current branch after the given number of passes. stopped branch simply goes nowhere */
   def stop (pass:Int = 1) = new razie.gremlins.eng.WfStop (pass)
+ 
+  /** execute the branch but ignore it's return value and just propagate what was there */
+  def stash (branch: =>WfActivity) = {
+    val temp = razie.g.GUid()
+    wf.assign (temp, $0) + branch + wf.set ($(temp))
+  }
   
   // TODO
   //  def action (gref:String, action:String) = new WfAssetCmd (action, GRef.fromString(gref), AC(), Map())

@@ -76,9 +76,11 @@ class ProcessThread(
     //    }
 
     // for now: limitation: skip just one single node which must have just one branch out
+    // loops allow DONE actions to be executed again, so we only skip them if SKIPPED as well
     nextAct.synchronized {
-      if (nextAct.procState == ProcState.DONE) {
+      if (nextAct.procState == ProcState.DONE && nextAct.procStatus == ProcStatus.SKIPPED) {
         nextLink = nextAct.glinks.headOption
+        razie Debug "skipping (%s) because it's already DONE.SKIPPED, next is: %s".format(nextAct, nextLink.get.z)
         nextAct = nextLink.get.z
       }
     }
