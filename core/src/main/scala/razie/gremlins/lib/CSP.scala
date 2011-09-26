@@ -1,4 +1,5 @@
-/** ____    __    ____  ____  ____,,___     ____  __  __  ____
+/**
+ * ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -13,13 +14,15 @@ import razie.g._
 import razie.gremlins.act._
 import razie.wf
 import razie.wfs
+import CSP.Channel
 
 /** communication channel / pipe: put/get values in sequence */
 class CommChannel(val _name: String, val _size: Int) extends WQueue(_name, _size) {
   AllResources add this
 }
 
-/** CSP - channel based communication between processes - implies multi-way synchronization on channels
+/**
+ * CSP - channel based communication between processes - implies multi-way synchronization on channels
  *
  *  Note that I don't really find a good distinction between CSP and PI - see it all under PiCalc below
  */
@@ -34,7 +37,8 @@ trait CSP extends WfLib[WfActivity] with WfBaseLib[WfActivity] {
   object Channel {
     /** creates a channle with a unique ID recommended approach */
     def apply() = WfChannel(GRef.uid, true)
-    /** creates a channle with a given name - NOTE that the name is shared across this AgentJVM
+    /**
+     * creates a channle with a given name - NOTE that the name is shared across this AgentJVM
      *  @param size how many values to buffer - 0 means blocking
      */
     def apply(name: String, size: Int) = WfChannel(name, true, size)
@@ -70,23 +74,23 @@ trait CSP extends WfLib[WfActivity] with WfBaseLib[WfActivity] {
     def >>(x: WfChannel) = x << a
     def <<(x: WfChannel) = x >> a
   }
-  implicit def tottwa (a: => WfActivity) = new TempWfa(a)
+  implicit def tottwa(a: => WfActivity) = new TempWfa(a)
 }
 
-/** special workflow activity to define/use a channel.
+/**
+ * special workflow activity to define/use a channel.
  *  It's used to inject channel syntax into workflow, like "c ! P"
  */
-case class WfChannel(cname: String, clear: Boolean = false, size: Int = 1)
+case class WfChannel(cname: String, shouldClear: Boolean = false, size: Int = 1)
   extends razie.gremlins.act.WfWrapper(
 
     new Wfe1("channel", CExpr (cname)) {
       override def apply(in: AC, v: Any) = {
-        import CSP.Channel
         val x = Channel resolve (cname, size)
-        if (clear) x.get.asInstanceOf[WQueue].clear
+        if (shouldClear) x.get.asInstanceOf[WQueue].clear
         v
       }
-      override def toDsl = "channel (" + clear + "," + size + "," + expr.toDsl + ")"
+      override def toDsl = "channel (" + shouldClear + "," + size + "," + expr.toDsl + ")"
     }) {
   import CSP.$0
 
@@ -114,11 +118,18 @@ case class WfChannel(cname: String, clear: Boolean = false, size: Int = 1)
   def apply() = this get $0 // allow c(x) + P
 
   def *(x: WfActivity) = apply(x) // allow v("c") * P === v(c).P
-  def apply(x: WfActivity) = wfs.collectOne {this + x} // allow v(x) (P Q)
-  def apply(x: WfChannel => WfActivity):WfActivity = apply (x(this)) // allow v(x) (P Q)
+  def apply(x: WfActivity) = wfs.collectOne { this + x } // allow v(x) (P Q)
+  def apply(x: WfChannel => WfActivity): WfActivity = apply (x(this)) // allow v(x) (P Q)
+
+  def clear() = {
+    val x = Channel resolve (cname, size)
+    x.get.asInstanceOf[WQueue].clear
+    this
+  }
 }
 
-/** PI calculus http://en.wikipedia.org/wiki/Pi-calculus
+/**
+ * PI calculus http://en.wikipedia.org/wiki/Pi-calculus
  *
  *  PI calculus is in essence "parallel processes, communicating via named channels".
  *

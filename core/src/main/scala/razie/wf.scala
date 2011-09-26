@@ -164,23 +164,40 @@ object wf extends WfBaseLib[WfActivity] {
 
   val MAX = 1000
 
+  /** build the equivalent construct of an actor.loopWhile: a loop reading from a queue, until the body's result evaluates the condition to false
+   *
+   *  NOTE that the body needs to respect the reset() because it will loop
+   *
+   *  NOTE if you want to have body behave like an actor (not read from default but wait on a channel), then use a channel yourself, see the PingPong parallel sample, in samples
+   *
+   *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
+   *  @param body the body of the actor
+   */
+  def loopWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = "loopWhile" label wfs.noCollect {
+    repeatUntil (wfs.wcnot(e)) {
+      body
+    } + wf.stash (wf.log ("loopWhile loop is completed"))
+  }
+
+  /** repeat the body as long as the condition is true. condition tested up-front 
+   * 
+   *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
+   */
   def doWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = "doWhile" label wfs.noCollect {
     // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
-    // save the value
-    //    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
     var counter = 0
     val head = wf.label ("head", wf.nop)
     val loop = wf.label ("loop", wf.stop(1))
     val done = wf.label ("done", wf.stop(1))
     val bbody = { body } // TODO maybe collecting the body should not be strict?
 
-    val xbody = wf seq Seq (
-      "inc counter" label wfs.w { x => { counter = counter + 1; x } })
+    val xbody = "inc counter" label wfs.w { x => { counter = counter + 1; x } }
 
     bbody --| xbody --| loop
 
     val i = wfs strict {
-      new WfDynIfa(wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (e), bbody) welse done
+      new WfDynIfa(
+          wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (e), bbody) welse done
     }
 
     // after the if is built, redirect end to head
@@ -189,21 +206,23 @@ object wf extends WfBaseLib[WfActivity] {
     (head --> i)
   }
 
+  /** repeat the body as long as the condition is true. condition tested at the end 
+   * 
+   *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
+   */
   def repeatUntil(e: WFunc[Boolean])(body: => WfActivity): WfActivity = "repeatUntil" label wfs.noCollect {
     // TODO add a limit for looping, like a 1000 loops max, to prevent out of control loops gobbling shit up
-    // save the value
-    //    val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV1( (x) => (0, x)))
     var counter = 0
     val head = wf.label ("head", wf.nop)
     val loop = wf.label ("loop", wf.nop)
     val done = wf.label ("done", wf.stop(1))
     val bbody = { body } // TODO maybe collecting the body should not be strict?
 
-    val xbody = wf seq Seq (
-      "inc counter" label wfs.w { x => { counter = counter + 1; x } })
+    val xbody = "inc counter" label wfs.w { x => { counter = counter + 1; x } }
 
     val i = wfs strict {
-      new WfDynIfa(wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (wfs.wcnot(e)), loop) welse done
+      new WfDynIfa(
+          wfs.wcAnd (x => { if (counter >= MAX) razie.Alarm ("MORE than max loops"); counter < MAX }) (wfs.wcnot(e)), loop) welse done
     }
 
     loop --> head

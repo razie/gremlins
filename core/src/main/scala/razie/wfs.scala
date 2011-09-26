@@ -82,33 +82,69 @@ import razie.gremlins.lib.WfChannel
 class wfs {
   import razie.wf
 
-  // shortcut for nocolelct -  don't collect these activities. Collection is a hack for the workflow DSL
-  def noCollect[T](f: => T): T = WfaCollector.noCollect (f)
+  /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started, 
+   * unless is marked as strict - see strict below.
+   * 
+   * The body of the seq is executed when the seq node is started. It will be collecting all the activities built inside 
+   * the body. All the activities collected will then be executed in sequence.
+   * 
+   * If no activity is built in the body, you end up with a plain scala code execution...
+   * 
+   * You can mix and embedd seq and par on multiple levels.
+   */
+  def seq(body: => Unit): WfActivity = new WfDynSeq(new WfeScala(body))
 
-  /** do not collect the contents, just the result */
-  def collectOne(f: => WfActivity): WfActivity = {
-    val body = noCollect {
-      f
-    }
-    WfaCollector.current.map { _ collect body }
-    body
-  }
+  /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started, 
+   * unless is marked as strict - see strict below.
+   *
+   * The body of the par is executed when the par node is started. It will be collecting all the activities built inside 
+   * the body. All the activities collected will then be started in parallel. Their results will be joined back and 
+   * returned as a list. In essence, this acts like a fork/join on as many threads as activities are built inside the 
+   * body.
+   * 
+   * If no activity is built in the body, you end up with a plain scala code execution...
+   * 
+   * You can mix and embedd seq and par on multiple levels.
+   */
+  def par(body: => Unit) = new WfDynPar(new WfeScala(body))
 
-  /** do not collect the contents, just the result */
-  def resultOf(f: => WfActivity): Unit = collectOne (f)
-
-  /** interpret this workflow definition right now, not later */
-  def strict(f: => WfActivity): WfActivity = WfaCollector.flagged ("strict") (f)
-
-  /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
-  def seqf(f: (Any) => Any): WfActivity = later (f)
-  /** create leaf activity containing scala code. It cannot contain more activities */
-  //  def sync(f: (Any) => Any): WfActivity = w(f)
-  //  def sync(f: => Unit): WfActivity = w(f)
   /** create leaf activity containing scala code. It cannot contain more activities */
   def async(f: (Any) => Any): WfActivity = w(f)
   //  def async(f: => Unit): WfActivity = w(f)
 
+  //----------------- base activitities
+
+  /** create leaf activity containing scala code. It cannot contain more activities */
+  def w(body: => Unit): WfActivity = new WfScala(() => {
+    WfaCollector.cantCollect ("async") { body }
+  })
+
+  /** create leaf activity containing scala code. It cannot contain more activities */
+  def w(body: Any => Any): WfActivity = new WfScalaV1((x) => {
+    WfaCollector.cantCollect ("sync") { body(x) }
+  })
+  //  def w(f: => Any) = new WfScalaV0(() => f)
+  //  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
+  //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
+
+  /** create leaf activity containing scala code. It cannot contain more activities */
+  def later(body: Any => Any): WfActivity = w(body)
+  
+  /** create a leaf activity from a partial function. */
+  def matchLater[B](body: PartialFunction[Any, B]) =
+    new WfScalaV1((x) => if (body.isDefinedAt(x)) body(x) else x)
+
+  //  def apply(f: => Unit) = w(f)
+  def apply(f: Any => Any) = w(f)
+
+  /** assign name in context to the last value produced by the previous activity */
+  def assign(name: String) = wf.assign(name, wf.$0)
+
+  def $(name: String) = wf.$(name)
+  def $0 = wf.$0
+
+  //------------------- call
+  
   /** call a sub-process with a different startup value than $0
    *
    *  @param e an expression evaluated in the context of THIS workflow
@@ -120,49 +156,10 @@ class wfs {
 
   /** scala code with input and return values */
   class WfsCall(val e: $Expr, val a: WfActivity) extends WfScalaV1((x) => x) {
+    // TODO this runs the sub-workflow, which is expensive, should instead bind it and fork through it
+    // remember the same wf may be shared at the same time by many instances/wokflows?
     override def apply(in: AC, v: Any): Any = a.run (e.apply(in, v))
   }
-
-  /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started */
-  def seq(f: => Unit): WfActivity = new WfDynSeq(new WfeScala(f))
-
-  //  // this allows seq{par{}}
-  //  def seq(f: => WfDynPar) = new WfDynSeq(new WfeScala(f))
-
-  /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started.
-   *
-   *  the body of the par is executed when the par node is started. at the end, all defined nodes will be started in parallel
-   */
-  def par(f: => Unit) = new WfDynPar(new WfeScala(f))
-
-  //----------------- base activitities
-
-  /** create leaf activity containing scala code. It cannot contain more activities */
-  def w(f: => Unit): WfActivity = new WfScala(() => {
-    WfaCollector.cantCollect ("async") { f }
-  })
-
-  /** create leaf activity containing scala code. It cannot contain more activities */
-  def w(f: Any => Any): WfActivity = new WfScalaV1((x) => {
-    WfaCollector.cantCollect ("sync") { f(x) }
-  })
-  //  def w(f: => Any) = new WfScalaV0(() => f)
-  //  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
-  //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
-
-  def later(f: Any => Any): WfActivity = w(f)
-  //  def later(f: => Unit): WfActivity = w(f)
-  def matchLater[B](f: PartialFunction[Any, B]) =
-    new WfScalaV1((x) => if (f.isDefinedAt(x)) f(x) else x)
-
-  //  def apply(f: => Unit) = w(f)
-  def apply(f: Any => Any) = w(f)
-
-  /** assign name in context to the last value produced by the previous activity */
-  def assign(name: String) = wf.assign(name, wf.$0)
-
-  def $(name: String) = wf.$(name)
-  def $0 = wf.$0
 
   //--------------------- simulating the let! from F# syntax
 
@@ -244,34 +241,74 @@ class wfs {
     vorigA --| va --| (head --> i)
   }
 
+  //================================================== collecting control
+  
+  // shortcut for nocolelct -  don't collect these activities. Collection is a hack for the workflow DSL
+  def noCollect[T](f: => T): T = WfaCollector.noCollect (f)
+
+  /** do not collect the contents, just the result */
+  def collectOne(f: => WfActivity): WfActivity = {
+    val body = noCollect {
+      f
+    }
+    WfaCollector.current.map { _ collect body }
+    body
+  }
+
+  /** do not collect the contents, just the result */
+  def resultOf(f: => WfActivity): Unit = collectOne (f)
+
+  /** interpret this workflow definition right now, not later */
+  def strict(f: => WfActivity): WfActivity = WfaCollector.flagged ("strict") (f)
+
+  //================================================== looping
+  
   val max: Int = 100
 
-  /** build the equivalent construct of an actor: a loop reading from a queue, until the body's result evaluates the condition to false
+  /** build the equivalent construct of an actor.loopWhile: a loop reading from a queue, until the body's result evaluates the condition to false
    *
    *  NOTE that the body needs to respect the reset() because it will loop
    *
    *  NOTE if you want to have body behave like an actor (not read from default but wait on a channel), then use a channel yourself, see the PingPong parallel sample, in samples
    *
    *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
-   *  @param body the body of the actor
+   *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def actWhile(e: Any => Boolean)(body: => WfActivity): WfActivity = "actUntil" label noCollect {
-    repeatUntil (!e(_)) {
-      //      (channel ? body)
-      body
-    } + wf.stash (wf.log ("actUntil loop is completed"))
-  }
+  def loopWhile(e: Any => Boolean)(body: => WfActivity): WfActivity = 
+    wf.loopWhile (wc1(x => e(x))) (body)
 
-  def doWhile(e: Any => Boolean)(body: => WfActivity): WfActivity =
+  /** repeat the body as long as the condition is true. condition tested up-front
+   * 
+   *  @param cond is a boolean expression evaluated with the current value
+   *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
+   */
+  def doWhile (e: Any => Boolean) (body: => WfActivity): WfActivity =
     doWhile (wc1(x => e(x))) (body)
 
-  def doWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.doWhile(e)(body)
+  /** repeat the body as long as the condition is true. condition tested up-front
+   * 
+   *  @param cond is a boolean expression evaluated with the current value
+   *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
+   */
+  def doWhile (e: WFunc[Boolean]) (body: => WfActivity): WfActivity = wf.doWhile(e)(body)
 
-  def repeatUntil(e: Any => Boolean)(body: => WfActivity): WfActivity =
+  /** repeat the body as long as the condition is true. condition tested at the end 
+   * 
+   *  @param cond is a boolean expression evaluated with the current value
+   *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
+   */
+  def repeatUntil (e: Any => Boolean) (body: => WfActivity): WfActivity =
     repeatUntil (wc1(x => e(x))) (body)
 
-  def repeatUntil(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.repeatUntil(e)(body)
+  /** repeat the body as long as the condition is true. condition tested at the end 
+   * 
+   *  @param cond is a boolean expression evaluated with the current value
+   *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
+   */
+  def repeatUntil (e: WFunc[Boolean]) (body: => WfActivity): WfActivity = wf.repeatUntil(e)(body)
 
+  //================================== maps and stuff
+  
   def wsmap[A, B](branches: Int)(f: A => B) = "wsmap" label noCollect {
     val p = seq {
       par {

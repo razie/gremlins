@@ -1,4 +1,5 @@
-/** ____    __    ____  ____  ____,,___     ____  __  __  ____
+/**
+ * ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -14,7 +15,8 @@ import razie.gremlins.act.ProcState
 import razie.gremlins.act.ProcStatus
 import razie.gremlins.act.LinkState
 
-/** This is the basic node in the graph: an activity waiting to be traversed/executed.
+/**
+ * This is the basic node in the graph: an activity waiting to be traversed/executed.
  *
  *  The workflow is modelled as a graph of activities connected by links/dependencies. NOTE that it may have cycles so you should always use the dag method when traversing...
  *
@@ -24,7 +26,8 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   //  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
   override var glinks: Seq[WfLink] = Nil // links 
 
-  /** the engine is traversing the graph...similar to executing it.
+  /**
+   * the engine is traversing the graph...similar to executing it.
    *
    *  executing these means maybe doing something (in=>out) AND figuring out who's next
    *
@@ -77,17 +80,21 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def <-+(z: WfActivity): WfActivity = z +-> this
 
   /** use this if you want to re-use a workflow... it is really not guaranteed to work in all scenarios */
-  def reset : WfActivity = {
-    procState = ProcState.CREATED
-    procStatus = ProcStatus.WHATEVER 
-    glinks map (l => { l.linkState = LinkState.CREATED; Option(l.z).map (_.reset)})
+  def reset: WfActivity = {
+    dag.foreachNode { (n, _) =>
+      n.procState = ProcState.CREATED
+      n.procStatus = ProcStatus.WHATEVER
+      n.glinks map (l => { l.linkState = LinkState.CREATED })
+    }
+    //    n.glinks map (l => { l.linkState = LinkState.CREATED; Option(l.z).map (_.reset)})
     this
   }
 
   /** wrap this into a graph that protects against stack overflow while traversing cycles */
   def dag = razie.g.Graphs.entire[WfActivity, WfLink](this).dag
-      
-  /** this will bind it to a parent in a DSL construct. Use this very carefully.
+
+  /**
+   * this will bind it to a parent in a DSL construct. Use this very carefully.
    *  Find usages by seeing who pushes self into WfaCollector
    */
   WfaCollector.current.map { _ collect this }

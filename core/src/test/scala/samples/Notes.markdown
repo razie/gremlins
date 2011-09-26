@@ -50,3 +50,24 @@ Note that the one below is worse: the seq will create an infinite loop since it 
     }
 
 
+5. Remember, only seq and par can take multiple builders
+All other constructs only use either Unit or =>WfActivity so they can take at most one builder inside. 
+For instance:
+
+     // this is wrong - only the last activity will be executed, the first will be lost
+      actWhile (_ != "done") {
+          pingChannel ? w(ping)
+          pongChannel ! $0
+      }
+     // this is good - the sequence collects both activities
+      actWhile (_ != "done") {
+        seq {
+          pingChannel ? w(ping)
+          pongChannel ! $0
+        }
+      }
+     // this is good - because the pipes are smart about collecting
+      actWhile (_ != "done") {
+        pongChannel ! (pingChannel ? w(ping))
+      }
+

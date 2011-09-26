@@ -9,38 +9,6 @@ import razie.AA
 import razie.base.{ActionContext => AC}
 import razie.gremlins._
 
-////----------- pattern based
-//  
-//abstract case class WAM () extends WfActivity {
-//  def mlinks : Seq[WfLinkM] // links 
-//   
-//  /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-//  def traverse (in:AC, v:Any) : (Any,Seq[WfLink])
-//}
-//
-//trait Matcher {
-//  def matches (x:Any) : Boolean = true
-//}
-//
-///** may want to store some color here...or have the link do something */
-//case class WfLinkM (override val a:WA, override val z:WA, val m:Matcher) extends WfLink(a,z) { }
-//  
-//  /** simple activities just do their thing */
-//  case class WfmSimple extends WfActivity { 
-//    override def activities : Seq[WA] = Nil
-//    override def links : Seq[WfLink] = Nil
-//   
-//    /** executing these means maybe doing something (in=>out) AND figuring out who's next */
-//    override def traverse (in:AC, v:Any) : (Any,Seq[WfLink]) = this match {
-//       case a : WfExec => (a.exec(in, v), links)
-//       case _ => (v,links)
-//    }
-//    
-////    def mlinks : 
-//  }
-//
-////---------------------- END matcher-based  
-//
 //----------------------- match/guard
   
 /** match AT MOST one branch */

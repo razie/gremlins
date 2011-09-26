@@ -64,7 +64,13 @@ case class $Expr (name : String) extends AExpr ("$"+name) {
 abstract class BExpr (e:String) extends Expr[Boolean] (e) {
   def || (b:BExpr) = new BCMP1 (this,"||",b)
   def && (b:BExpr) = new BCMP1 (this,"&&",b)
-}  
+  def not = new BCMPNot (this)
+}
+
+/** negated boolean expression */
+case class BCMPNot(a: BExpr) extends BExpr("") {
+  override def apply(in: AC, v: Any) = ! a.apply(in, v)
+}
 
 /** composed boolean expression */
 case class BCMP1 (a:BExpr, s:String, b:BExpr) extends BExpr (a.toDsl+" "+s+" "+b.toDsl) {
