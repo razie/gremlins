@@ -23,7 +23,7 @@ import razie.gremlins.act._
  *  traversal - hence the WfScope on top of WfProxy (which i actually didn't change but have replaced
  *  with WfScope)
  *
- *  @author razvanc
+ *  @author Razvan Cojocaru
  */
 object wf extends WfBaseLib[WfActivity] {
 
