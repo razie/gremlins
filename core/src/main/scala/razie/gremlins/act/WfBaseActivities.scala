@@ -1,22 +1,22 @@
-/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
+/** ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
 package razie.gremlins.act
 
+import scala.collection.mutable.ListBuffer
 import razie.AA
 import razie.base.{ ActionContext => AC }
 import razie.gremlins._
 import razie.wf
 
-/**
- * basic workflow patterns
- * 
- * http://www.yawlfoundation.org/resources/patterns,
- * http://www.workflowpatterns.com/documentation/
+/** basic workflow patterns
  *
- * basic patterns: seq, split-and, split-xor, and-join, xor-join, cancel
+ *  http://www.yawlfoundation.org/resources/patterns,
+ *  http://www.workflowpatterns.com/documentation/
+ *
+ *  basic patterns: seq, split-and, split-xor, and-join, xor-join, cancel
  */
 
 //-------------------------------- basic activities
@@ -25,7 +25,7 @@ import razie.wf
 class WfSimple extends WfActivity {
   override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = this match {
     case a: WfExec => (a.apply(in, v), glinks)
-    case _ => (v, glinks)
+    case _         => (v, glinks)
   }
 }
 
@@ -46,8 +46,8 @@ class WfWrapper(wrapped: WfExec) extends WfSimple with WfExec with HasDsl {
 
   override def toString: String = wrapped match {
     case d: notisser => "wf." + wrapped.wname
-    case d: HasDsl => d.toDsl + "(" + key + ")"
-    case _ => "wf." + wrapped.wname
+    case d: HasDsl   => d.toDsl + "(" + key + ")"
+    case _           => "wf." + wrapped.wname
   }
 
   override def wname = wrapped.wname
@@ -66,9 +66,8 @@ class WfEnd(a: WfActivity*) extends WfSimple {
   (a flatMap (x => x.dag filterNodes { z => z.glinks.isEmpty })).distinct foreach (i => i +-> this)
 }
 
-/** 
- * the new proxy: contains a sub-graph.
- * will point to the entry point of its sub-graph and connect the end of it to itself.
+/** the new proxy: contains a sub-graph.
+ *  will point to the entry point of its sub-graph and connect the end of it to itself.
  */
 class WfScope(aa: WfActivity, var l: WfLink*) extends WfStart(aa) with HasDsl {
   val end = new WfScopeEnd(aa, l: _*)
@@ -76,8 +75,7 @@ class WfScope(aa: WfActivity, var l: WfLink*) extends WfStart(aa) with HasDsl {
   override def toDsl = "scope " + (wf toDsl aa)
 }
 
-/** 
- * special activity - ends a scope and points to where the scope was meant to point to
+/** special activity - ends a scope and points to where the scope was meant to point to
  */
 class WfScopeEnd(s: WfActivity, var l: WfLink*) extends WfEnd(s) {
   glinks = l.map(x => { if (x.a == s) new WfLink(this, x.z) else x })
@@ -169,11 +167,13 @@ abstract class WfBound extends WfSimple {
   }
 }
 
-/** a sequence contains a list of proxies 
- * 
- * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
+/** a sequence contains a list of proxies
+ *
+ *  NOTE this is a scoped activity - it will scope the enclosed sub-graphs
  */
 class WfSeq(a: WfActivity*) extends WfBound with HasDsl {
+  var optimized = false
+
   override def lastAct: WfActivity = {
     // while building dynamic worklfows, there could be a seq no nodes but 1 link...
     glinks.lastOption.map(x => gnodes.lastOption.getOrElse(this)).getOrElse(this)
@@ -200,9 +200,9 @@ class WfSeq(a: WfActivity*) extends WfBound with HasDsl {
   override def toDsl = "seq {\n" + (wf indent gnodes.map(wf toDsl _).mkString("\n")) + "\n}"
 } // to avoid seq(seq(t)) we redefine to just link to what i already have
 
-/** fork-join. The end will wait for all processing threads to be done 
- * 
- * NOTE this is a scoped activity - it will scope the enclosed sub-graphs
+/** fork-join. The end will wait for all processing threads to be done
+ *
+ *  NOTE this is a scoped activity - it will scope the enclosed sub-graphs
  */
 class WfPar(a: WfActivity*) extends WfBound with HasDsl {
   lazy val aj = WfaCollector.noCollect { new eng.AndJoin() }
@@ -214,7 +214,7 @@ class WfPar(a: WfActivity*) extends WfBound with HasDsl {
   override def lastAct: WfActivity = glinks.lastOption.map(x => gnodes.last).getOrElse(this)
 
   // to avoid par(par(t)) we redefine to just link to what i already have
-  override def | (e: WfActivity) = {
+  override def |(e: WfActivity) = {
     val p = wf.scope(e)
     glinks = List(new WfLink(this, p)) ::: glinks.toList
     gnodes = gnodes.toList ::: List(p)
@@ -271,11 +271,10 @@ class WfScalaV1u(val f: (Any) => Unit) extends WfSimple with WfExec {
 
 case class WfElse(t: WfActivity) extends WfScope(t)
 
-/** 
- * if-then-else
- * 
- * NOTE this is a scoped activity - it will scope the enclosed sub-graphs when serialized
- * TODO NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
+/** if-then-else
+ *
+ *  NOTE this is a scoped activity - it will scope the enclosed sub-graphs when serialized
+ *  TODO NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
  */
 case class WfIf(val cond: WFunc[Boolean], t: WfActivity, var e: Option[WfElse] = None)
   extends WfSelOne(cond) with HasDsl {
@@ -291,7 +290,7 @@ case class WfIf(val cond: WFunc[Boolean], t: WfActivity, var e: Option[WfElse] =
     } else // oops, is this an welse wif welse?
       this.e.head.t match {
         case i: WfIf => i.welse(a)
-        case _ => razie.Error("a second welse clause") // TODO cause syntax error
+        case _       => razie.Error("a second welse clause") // TODO cause syntax error
       }
     this
   }
@@ -312,15 +311,19 @@ trait WfaCollected {
 
 /** dynamic sequence collects its body at runtime - not nice
  */
-class WfDynSeq(a: WfExec) extends WfSeq() with WfaCollected {
+class WfDynSeq(a: WfExec, _optimized: Boolean = false) extends WfSeq() with WfaCollected {
+  optimized = _optimized
+  var collector: ListBuffer[WfActivity] = new ListBuffer[WfActivity]() // for wfa use only
 
   override def collect(in: AC, v: Any): (Any, Seq[WfLink]) = {
     collected = true
 
-    val lb = new collection.mutable.ListBuffer[WfActivity]
+    val lb = new collection.mutable.ListBuffer[WfActivity] // for wfa use only
     val out = WfaCollector.collect (lb append _) (this) {
       a.apply (in, v)
     }
+
+    collector = lb
 
     // construct with the colected
     //lb map (this + _)
@@ -405,30 +408,27 @@ class WfDynPar(a: WfExec) extends WfPar() with WfaCollected {
   }
 }
 
-/** 
- * if-then-else
- * 
- * NOTE this is a scoped activity - it will scope the enclosed sub-graphs when serialized
- * TODO NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
+/** if-else
+ *
+ *  NOTE this is a scoped activity - it will scope the enclosed sub-graphs when serialized
  */
 class WfDynIf(ccond: WFunc[Boolean], t: => Unit, ee: Option[WfDynElse] = None)
   extends WfDynIfa(ccond, WfaCollector.noCollect { razie.wfs.seq (t) }, ee)
-  
-/** 
- * if-then-else
- * 
- * NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
+
+/** if-then-else
+ *
+ *  NOTE this is NOT a scoped activity - it will NOT scope the enclosed sub-graphs if not serialized
  */
 class WfDynIfa(val cond: WFunc[Boolean], a: => WfActivity, var e: Option[WfDynElse] = None)
   extends WfSelOne(cond) with HasDsl with WfaCollected {
-  lazy val tBranch : WfActivity = a
-  
-//  def this (cond: WFunc[Boolean], t : => Unit ) = 
-//    this (cond, () => WfaCollector.noCollect { razie.wfs.seq (t) })
-  
-  var preservedLinks : Seq[WfLink] = Nil
+  lazy val tBranch: WfActivity = a
 
-  // syntax helper
+  //  def this (cond: WFunc[Boolean], t : => Unit ) = 
+  //    this (cond, () => WfaCollector.noCollect { razie.wfs.seq (t) })
+
+  var preservedLinks: Seq[WfLink] = Nil
+
+  /** build an 'else' branch: the body is wrapped and collected inside a wfs.seq */
   def welse(a: => Unit): WfDynIfa = WfaCollector.noCollect {
     if (e.isEmpty) {
       this.e = Some(new WfDynElse(a)) // to make sure that for next welse is not empty
@@ -437,11 +437,11 @@ class WfDynIfa(val cond: WFunc[Boolean], a: => WfActivity, var e: Option[WfDynEl
         glinks = preservedLinks
         this.collect (AA.EMPTY, "?")
       }
-//    } else // oops, is this an welse wif welse?
-//      this.e.head.t match {
-//        case i: WfDynIf => i.welse(a)
-//        case _ => razie.Error("a second welse clause") // TODO cause syntax error
-      }
+      //    } else // oops, is this an welse wif welse?
+      //      this.e.head.t match {
+      //        case i: WfDynIf => i.welse(a)
+      //        case _ => razie.Error("a second welse clause") // TODO cause syntax error
+    }
     this
   }
 
@@ -450,14 +450,14 @@ class WfDynIfa(val cond: WFunc[Boolean], a: => WfActivity, var e: Option[WfDynEl
     e map (_.collect (in, v))
     // dynamic IFs will preserve the end activity
     preservedLinks = glinks
-    
+
     this --> (true -> tBranch)
     e map (x => this +-> (false -> x))
 
     assert (preservedLinks.size <= 1)
-    if (!preservedLinks.isEmpty) 
-      this --| preservedLinks.head.z 
-      
+    if (!preservedLinks.isEmpty)
+      this --| preservedLinks.head.z
+
     (v, Seq())
   }
 
@@ -483,29 +483,29 @@ class WfDynElse(t: => Unit) extends WfDynSeq(new WfeScala(t)) with WfaCollected 
 class WfFlatten[A] extends WfSimple with WfExec {
   override def apply(in: AC, v: Any): Any = {
     v.asInstanceOf[List[List[A]]].flatten
-//    if (l.isEmpty) Nil
-//    else l.foldRight(Nil)((a,b) => a ::: b)
+    //    if (l.isEmpty) Nil
+    //    else l.foldRight(Nil)((a,b) => a ::: b)
   }
 }
 
 /** scala code with input and return values */
-class WfFlatMap[A,B] (f: A => List[B]) extends WfSimple with WfExec {
+class WfFlatMap[A, B](f: A => List[B]) extends WfSimple with WfExec {
   override def apply(in: AC, v: Any): Any = {
     v.asInstanceOf[List[A]].flatMap (f)
   }
 }
 
 /** scala code with input and return values */
-class WfMap[A,B] (f: A => B) extends WfSimple with WfExec {
+class WfMap[A, B](f: A => B) extends WfSimple with WfExec {
   override def apply(in: AC, v: Any): Any = {
     v.asInstanceOf[List[A]].map (f)
   }
 }
 
 /** scala code with input and return values */
-class WfSliceMap[A,B] (slice: WfExec) (f: A => B) extends WfSimple with WfExec {
+class WfSliceMap[A, B](slice: WfExec)(f: A => B) extends WfSimple with WfExec {
   override def apply(in: AC, v: Any): Any = {
-    val sl = slice.apply (in, v).asInstanceOf[(Int,Int)]
+    val sl = slice.apply (in, v).asInstanceOf[(Int, Int)]
     println ("-----------wfslicemap " + sl)
     if (sl._1 <= sl._2)
       (sl._1, v.asInstanceOf[List[A]].slice(sl._1, sl._2).map (f))

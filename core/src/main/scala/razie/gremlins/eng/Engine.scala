@@ -220,9 +220,8 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
 
   /** process one tick, advancing one execution path along the way - call from either threads or actors */
   override def processtTack(msg: PTMsg, killeable: Killeable) {
-    msg match {
 
-      case Tack(p, t, a) => {
+      def processTack(p: Process, t: ProcessThread, a: Actor) {
         t.currActor = Option(killeable) // TODO Option(this)
         val s = try {
           t.execAndAdvance._2 // this carries out the actual work...
@@ -305,9 +304,17 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
               }
             }
             s filter (_ != t) map (pspawn(_))
-            s map (ptt => psend(Tack(p, ptt, a)))
+            s map (ptt => {
+              val optimize = false
+              if (s.size == 1 && optimize) // sync optimization: recurse rather than async
+                processTack (p, ptt, a)
+              else psend(Tack(p, ptt, a))
+            })
         }
-      } // case Tack
+      } // processTack
+
+    msg match {
+      case Tack(p, t, a) => processTack (p, t, a)
 
       // reply from resource - continue original thread
       case Reply(p, t, rr, a) => {

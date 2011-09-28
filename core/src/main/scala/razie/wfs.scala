@@ -6,6 +6,7 @@
 package razie
 
 import java.lang.IllegalStateException
+
 import razie.base.{ ActionContext => AC }
 import razie.gremlins.act.WfCase2ap
 import razie.gremlins.act.WfGroupBy
@@ -37,12 +38,10 @@ import razie.gremlins.act.WfeScala
 import razie.gremlins.act.WfeScalaV1
 import razie.gremlins.WFunc
 import razie.gremlins.$Expr
-import razie.gremlins.BExpr
 import razie.gremlins.WfActivity
 import razie.gremlins.WfExec
 import razie.gremlins.WfaCollector
-import razie.gremlins.lib.CSP
-import razie.gremlins.lib.WfChannel
+import razie.wf
 
 /** scala workflows - these are not nice because can't be serialized/distributed easily
  *
@@ -73,44 +72,50 @@ import razie.gremlins.lib.WfChannel
  *  The ENTIRE body is executed once, like the constructor of a class. only specially marked statements
  *  become nodes in the workflow...those prefixed by a keyword in this object.
  *
- *  The workflow then built can be run at will, once! You can build it again and again wihta def instead of val.
+ *  The workflow then built can be run at will, once (or many times at your risk)!
+ *  You can build it again and again with a def instead of val.
  *
  *  As a general rule, each node gets an input value and returns an output value. The "par" will create a list.
  *
- *  @author razvanc
+ *  @author Razvan Cojocaru
  */
 class wfs {
   import razie.wf
 
-  /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started, 
-   * unless is marked as strict - see strict below.
-   * 
-   * The body of the seq is executed when the seq node is started. It will be collecting all the activities built inside 
-   * the body. All the activities collected will then be executed in sequence.
-   * 
-   * If no activity is built in the body, you end up with a plain scala code execution...
-   * 
-   * You can mix and embedd seq and par on multiple levels.
-   */
-  def seq(body: => Unit): WfActivity = new WfDynSeq(new WfeScala(body))
-
-  /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started, 
-   * unless is marked as strict - see strict below.
+  /** build a lazy seq node in a scala workflow. Note that the body won't be executed until the workflow is started,
+   *  unless is marked as strict - see strict below.
    *
-   * The body of the par is executed when the par node is started. It will be collecting all the activities built inside 
-   * the body. All the activities collected will then be started in parallel. Their results will be joined back and 
-   * returned as a list. In essence, this acts like a fork/join on as many threads as activities are built inside the 
-   * body.
-   * 
-   * If no activity is built in the body, you end up with a plain scala code execution...
-   * 
-   * You can mix and embedd seq and par on multiple levels.
+   *  The body of the seq is executed when the seq node is started. It will be collecting all the activities built inside
+   *  the body. All the activities collected will then be executed in sequence.
+   *
+   *  If no activity is built in the body, you end up with a plain scala code execution...
+   *
+   *  You can mix and embedd seq and par on multiple levels.
+   */
+  def seq(body: => Unit): WfActivity = new WfDynSeq(new WfeScala(body), false)
+
+  /** build a lazy par node in a scala workflow. Note that the body won't be executed until the workflow is started,
+   *  unless is marked as strict - see strict below.
+   *
+   *  The body of the par is executed when the par node is started. It will be collecting all the activities built inside
+   *  the body. All the activities collected will then be started in parallel. Their results will be joined back and
+   *  returned as a list. In essence, this acts like a fork/join on as many threads as activities are built inside the
+   *  body.
+   *
+   *  If no activity is built in the body, you end up with a plain scala code execution...
+   *
+   *  You can mix and embedd seq and par on multiple levels.
    */
   def par(body: => Unit) = new WfDynPar(new WfeScala(body))
 
+  /** just like seq but the activities are optimized and ran in a call loop not asynchronously
+   *
+   *  Note - not working yet
+   */
+  def sync(body: => Unit): WfActivity = new WfDynSeq(new WfeScala(body), true)
+
   /** create leaf activity containing scala code. It cannot contain more activities */
   def async(f: (Any) => Any): WfActivity = w(f)
-  //  def async(f: => Unit): WfActivity = w(f)
 
   //----------------- base activitities
 
@@ -123,13 +128,10 @@ class wfs {
   def w(body: Any => Any): WfActivity = new WfScalaV1((x) => {
     WfaCollector.cantCollect ("sync") { body(x) }
   })
-  //  def w(f: => Any) = new WfScalaV0(() => f)
-  //  def wa(f: Any => Any) = new WfScalaV1((x) => f(x))
-  //  /*implicit*/ def wau(f: Any => Unit) = new WfScalaV1u((x) => f(x))
 
   /** create leaf activity containing scala code. It cannot contain more activities */
   def later(body: Any => Any): WfActivity = w(body)
-  
+
   /** create a leaf activity from a partial function. */
   def matchLater[B](body: PartialFunction[Any, B]) =
     new WfScalaV1((x) => if (body.isDefinedAt(x)) body(x) else x)
@@ -144,7 +146,7 @@ class wfs {
   def $0 = wf.$0
 
   //------------------- call
-  
+
   /** call a sub-process with a different startup value than $0
    *
    *  @param e an expression evaluated in the context of THIS workflow
@@ -161,6 +163,17 @@ class wfs {
     override def apply(in: AC, v: Any): Any = a.run (e.apply(in, v))
   }
 
+  /** send to an actor and wait reply
+   * 
+   * TODO implement asynchronously
+   */
+  def act(e: $Expr)(a: => scala.actors.Actor): WfActivity = new WfScalaV1((x) => x) {
+    override def apply(in: AC, v: Any): Any = a !? (e.apply(in, v))
+  }
+  /** send $0 to an actor and wait reply */
+  def act(a: => scala.actors.Actor): WfActivity = act ($0)(a) // TODO test
+
+  
   //--------------------- simulating the let! from F# syntax
 
   class LetBang(name: String) {
@@ -192,6 +205,9 @@ class wfs {
   def wcAnd(cond: Any => Boolean)(wf: WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = cond(v) && wf.apply(in, v) }
   def wcnot(wf: WFunc[Boolean]): WFunc[Boolean] = new WFunc[Boolean] { override def apply(in: AC, v: Any) = !wf.apply(in, v) }
 
+  /** a lazy if-else construct. The activities built on the if and else branches are
+   *  collected inside a wfs.seq
+   */
   def wif(cond: FB)(f: => Unit) = new WfDynIf(cond, f)
   def wif(cond: Cond1)(f: => Unit) = new WfDynIf(wc1(cond), f)
 
@@ -207,12 +223,10 @@ class wfs {
   implicit val linkFactory = (x, y) => new razie.gremlins.WfLink(x, y)
 
   class LString(name: String) {
-    //    def label (f: => WfActivity) = wf.label(name, f)
     def label(f: => WfActivity) = new WfLabelInsert(name) --> noCollect { f }
   }
   implicit def toLString(label: String) = new LString(label)
 
-  //  def wforeach[T](f: => WfActivity) = wf seq noCollect {
   def wforeach[T](f: => WfActivity) = "wforeach" label noCollect {
     val (vorigA, vorig) = wfs.ilet ("var-" + razie.g.GRef.uid) (wf.nop)
     val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => 0))
@@ -242,8 +256,8 @@ class wfs {
   }
 
   //================================================== collecting control
-  
-  // shortcut for nocolelct -  don't collect these activities. Collection is a hack for the workflow DSL
+
+  /** shortcut for nocolelct -  don't collect these activities. Collection is a hack for the workflow DSL */
   def noCollect[T](f: => T): T = WfaCollector.noCollect (f)
 
   /** do not collect the contents, just the result */
@@ -262,10 +276,11 @@ class wfs {
   def strict(f: => WfActivity): WfActivity = WfaCollector.flagged ("strict") (f)
 
   //================================================== looping
-  
+
   val max: Int = 100
 
-  /** build the equivalent construct of an actor.loopWhile: a loop reading from a queue, until the body's result evaluates the condition to false
+  /** build the equivalent construct of an actor.loopWhile: a loop reading from a queue, until the body's result evaluates the condition to false.
+   *  This is implemented as a simple repeatUntil.
    *
    *  NOTE that the body needs to respect the reset() because it will loop
    *
@@ -274,41 +289,42 @@ class wfs {
    *  @param cond is a boolean expression evaluated on each message, while true the actor runs, when false it stops
    *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def loopWhile(e: Any => Boolean)(body: => WfActivity): WfActivity = 
+  def loopWhile(e: Any => Boolean)(body: => WfActivity): WfActivity =
     wf.loopWhile (wc1(x => e(x))) (body)
 
   /** repeat the body as long as the condition is true. condition tested up-front
-   * 
+   *
    *  @param cond is a boolean expression evaluated with the current value
    *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def doWhile (e: Any => Boolean) (body: => WfActivity): WfActivity =
+  def doWhile(e: Any => Boolean)(body: => WfActivity): WfActivity =
     doWhile (wc1(x => e(x))) (body)
 
   /** repeat the body as long as the condition is true. condition tested up-front
-   * 
+   *
    *  @param cond is a boolean expression evaluated with the current value
    *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def doWhile (e: WFunc[Boolean]) (body: => WfActivity): WfActivity = wf.doWhile(e)(body)
+  def doWhile(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.doWhile(e)(body)
 
-  /** repeat the body as long as the condition is true. condition tested at the end 
-   * 
+  /** repeat the body as long as the condition is true. condition tested at the end
+   *
    *  @param cond is a boolean expression evaluated with the current value
    *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def repeatUntil (e: Any => Boolean) (body: => WfActivity): WfActivity =
+  def repeatUntil(e: Any => Boolean)(body: => WfActivity): WfActivity =
     repeatUntil (wc1(x => e(x))) (body)
 
-  /** repeat the body as long as the condition is true. condition tested at the end 
-   * 
+  /** repeat the body as long as the condition is true. condition tested at the end
+   *
    *  @param cond is a boolean expression evaluated with the current value
    *  @param body the body of the actor - note this is not collecting, just the result will be the actual body
    */
-  def repeatUntil (e: WFunc[Boolean]) (body: => WfActivity): WfActivity = wf.repeatUntil(e)(body)
+  def repeatUntil(e: WFunc[Boolean])(body: => WfActivity): WfActivity = wf.repeatUntil(e)(body)
+
 
   //================================== maps and stuff
-  
+
   def wsmap[A, B](branches: Int)(f: A => B) = "wsmap" label noCollect {
     val p = seq {
       par {
