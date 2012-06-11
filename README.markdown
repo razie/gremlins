@@ -55,7 +55,7 @@ Examples
 v(c) (c ? P | c ! Q)
 --------------------
 
-PI/CSP examples in [CspDemo.scala](gremlins/blob/master/src/razie/wf/lib/CspDemo.scala)
+PI/CSP examples in [CspDemo.scala](gremlins/blob/master/core/src/main/scala/razie/gremlins/lib/CspDemo.scala) and [CspTest.scala](gremlins/blob/master/core/src/test/scala/razie/gremlins/lib/CspTest.scala)
 
     def P = wf.log($0 + "-P")
     def Q = wf.log($0 + "-Q")
@@ -68,7 +68,7 @@ PI/CSP examples in [CspDemo.scala](gremlins/blob/master/src/razie/wf/lib/CspDemo
 Internal Scala DSL Structure
 ----------------------------
 
-Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
+Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/core/src/test/scala/razie/gremlins/WfBaseTest.scala)
 
     def wif1 = 
     wif (_ == 1) {  // no good, really - condition not serializable
@@ -92,7 +92,7 @@ Basic DSL contrast (scala vs text) in [WfBaseTest.scala](gremlins/blob/master/te
 External DSL Structure
 -----------------------------
 
-Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/test_src/razie/wf/test/WfBaseTest.scala)
+Basic DSL examples in [WfBaseTest.scala](gremlins/blob/master/core/src/test/scala/razie/gremlins/WfBaseTest.scala)
 
       def wpar5 = """                                                                                                                       
     par {                                                                                                                                   
