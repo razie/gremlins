@@ -18,6 +18,8 @@ dive into the fun stuff!
 
 Read more about the [vision](gremlins/blob/master/Gremlins.markdown), [how to build](gremlins/blob/master/Building.markdown) or the [design](gremlins/blob/master/src/razie/wf/Design.markdown).
 
+Probably more interesting is how to write [scala workflows](gremlins/blob/master/ScalaWorkflows.markdown)
+
 
 Why?
 ----
