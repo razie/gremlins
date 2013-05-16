@@ -23,7 +23,6 @@ import razie.gremlins.act.LinkState
  *  Mixing in the state also allows its removal, should I decide to store it outside, later...cool, huh?
  */
 abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.WfaState with razie.g.WRGraph[WfActivity, WfLink] {
-  //  override var gnodes : Seq[WfActivity] = Nil // next activities - note that this is not containment, is it?
   override var glinks: Seq[WfLink] = Nil // links 
 
   /**
@@ -43,18 +42,29 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   override def toString: String = this.getClass().getSimpleName + " (" + key + ")"
 
   // syntax niceties 
+  
+  /** build a sequence */
   def +(e: WfActivity): WfActivity = new gremlins.act.WfSeq(this, e)
+  
+  /** build a parallel branch */
   def |(e: WfActivity): WfActivity = new gremlins.act.WfPar(this, e)
-  //  def | (e:Seq[WfActivity]) : WfActivity = WfPar ((this :: e.toList):_*)
 
   // limit depth for debugging purposes
   override def mkString = Graphs.entire[WfActivity, WfLink](this).dag.mkString
+  
+  /** debugging helper - prints to console */
   def print(): WfActivity = { println(this.mkString); this }
+
+  /** debugging helper - prints to console in a few formats */
   def debug(): WfActivity = { wf toDsl this; print }
 
-  // simplified execution
+  /** launch a workflow, wait and return the result. AVOID using this method except for tests and demos */
   def run(initialValue: Any): Any = Gremlins().exec(this, initialValue)
+  
+  /** start this workflow instance - do NOT wait for result */
   def start(initialValue: Any): Any = Gremlins().start(this, initialValue)
+  
+  /** debugging helper - prints to console and runs */
   def printAndRun(initialValue: Any) = {
     val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
     val out = razie.Gremlins().exec (this.print, initialValue)
@@ -79,7 +89,7 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def <--(z: WfActivity): WfActivity = z --> this
   def <-+(z: WfActivity): WfActivity = z +-> this
 
-  /** use this if you want to re-use a workflow... it is really not guaranteed to work in all scenarios */
+  /** use this if you want to re-use a workflow... it really is NOT guaranteed to work in all scenarios */
   def reset: WfActivity = {
     dag.foreachNode { (n, _) =>
       n.procState = ProcState.CREATED

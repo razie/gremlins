@@ -21,6 +21,26 @@ Read more about the [vision](gremlins/blob/master/Gremlins.markdown), [how to bu
 Probably more interesting is how to write [scala workflows](gremlins/blob/master/ScalaWorkflows.markdown)
 
 
+How to use
+---------------------
+
+The sbt/maven artifact is:
+
+    def gremlins = "com.razie" %% "gremlins"         % "0.6.3-SNAPSHOT"
+
+Make sure that, if you use a SNAPSHOT version, the snapshots repository is added to sbt, as in https://github.com/razie/
+scripster/blob/master/project/Build.scala :
+
+    resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
+                      "releases"  at "http://oss.sonatype.org/content/repositories/releases")
+
+
+Versions
+
+- 0.6.3-SNAPSHOT is the last 2.9.1 build
+- 0.6.4-SNAPSHOT is the 2.10.0 build
+
+
 Why?
 ----
 Threads, shared state, actors, processes...they're all stepping stones. A framework that allows full expressivity for creating 

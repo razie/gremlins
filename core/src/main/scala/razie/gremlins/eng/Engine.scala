@@ -193,7 +193,19 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) extends Logging {
   def resume {
     // TODO
   }
+}
 
+/** TODO use this
+ * execution settings for a single wf instance */
+class WfSettings(start: WfActivity) {
+  var _optimize      = true
+  var _honourThreads = true
+
+  /** optimize synchronous chains with recursive calls */
+  def optimized() = { _optimize = true; this }
+
+  /** honour as much threads as possbile - the engine will try to allocate one thread for EACH parallel branch, rather than using a pool */
+  def honourThreads() = { _honourThreads = true; this }
 }
 
 /** the engine is more complicated in this case, basically graph traversal */
@@ -411,7 +423,7 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
     (p, me)
   }
 
-  /** launch a workflow and wait for it to end before returning. AVOID using this method except for tests and demos */
+  /** launch a workflow, wait and return the result. AVOID using this method except for tests and demos */
   def exec(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): Any = {
     val t = istart(create(start, startV, ctx), startV, false)
 
@@ -420,6 +432,10 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
     t._1.lastV
   }
 
+  /** start a workflow instance and do not wait for result
+   *
+   *  TODO start should return a Future/Promise ?
+   */
   def start(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): Unit = {
     val t = istart(create(start, startV, ctx), startV, false)
     t._2 ! Start(t._1) // just start, no wait
@@ -438,7 +454,7 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
     p.lastV
   }
 
-  def preProcess(p: Process) {
+  private def preProcess(p: Process) {
     // cache z ends to AndJoins
     // TODO I use dag which is not the most efficient way to do this
     razie.g.Graphs.entire[WfActivity, WfLink](p.start).dag.foreach(

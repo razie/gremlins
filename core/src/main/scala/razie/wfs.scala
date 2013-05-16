@@ -120,17 +120,10 @@ class wfs {
   //----------------- base activitities
 
   /** create leaf activity containing scala code. It cannot contain more activities */
-  def w(body: => Unit): WfActivity = new WfScala(() => {
-    WfaCollector.cantCollect ("async") { body }
+  def later      (body: Any => Any): WfActivity = w(body)
+  def valueOf[B] (body: => B): WfActivity = new WfScalaV0(() => {
+    WfaCollector.cantCollect ("later") { body }
   })
-
-  /** create leaf activity containing scala code. It cannot contain more activities */
-  def w(body: Any => Any): WfActivity = new WfScalaV1((x) => {
-    WfaCollector.cantCollect ("sync") { body(x) }
-  })
-
-  /** create leaf activity containing scala code. It cannot contain more activities */
-  def later(body: Any => Any): WfActivity = w(body)
 
   /** create a leaf activity from a partial function. */
   def matchLater[B](body: PartialFunction[Any, B]) =
@@ -144,6 +137,17 @@ class wfs {
 
   def $(name: String) = wf.$(name)
   def $0 = wf.$0
+  def $0_=[T] (x: =>T) = valueOf(x)
+
+  /** create leaf activity containing scala code. It cannot contain more activities */
+  def w(body: => Unit): WfActivity = new WfScala(() => {
+    WfaCollector.cantCollect ("async") { body }
+  })
+
+  /** create leaf activity containing scala code. It cannot contain more activities */
+  def w(body: Any => Any): WfActivity = new WfScalaV1((x) => {
+    WfaCollector.cantCollect ("sync") { body(x) }
+  })
 
   //------------------- call
 

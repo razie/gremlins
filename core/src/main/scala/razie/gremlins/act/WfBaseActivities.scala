@@ -238,7 +238,7 @@ class WfPar(a: WfActivity*) extends WfBound with HasDsl {
 
 //---------------- scala code - not serializable though
 
-/** scala code with no input nor return values */
+/** scala code with no input nor return values. The default input is propagated as is */
 class WfScala(f: () => Unit) extends WfSimple with WfExec {
   override def apply(in: AC, v: Any): Any = { f(); v }
 }
@@ -247,7 +247,7 @@ class WfeScala(f: => Unit) extends WfExec {
   override def apply(in: AC, v: Any): Any = { f; v }
 }
 
-/** scala code with input and return values */
+/** scala code with one input and one return values */
 class WfeScalaV1(val f: (Any) => Any) extends WfExec {
   override def apply(in: AC, v: Any): Any = f(v)
 }

@@ -52,6 +52,7 @@ trait WfBaseLib[T] extends WfLib[T] { me =>
   def dec(i: Int = 1) = me wrap new WfeDec(WCFExpr parseAExpr i.toString)
   def dec: T = dec(1)
   def set(i: Any) = me wrap new WfeSet(WCFExpr parseAExpr i.toString)
+  def setValue[T](i: T) = me wrap new WfeSet(CExpr(i))
   def set(i: AExpr) = me wrap new WfeSet(i)
 
   /** log result of expression */

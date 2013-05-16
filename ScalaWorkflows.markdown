@@ -68,12 +68,15 @@ later, matchLater
 
 While seq/par deal with the structure of the workflow, later/matchLater build leaf activities which cannot have children. If you use any other builder inside one of these, you should get an error at definition time.
 
-    def later(f: Any => Any) : WfActivity 
-    def matchLater[B](f: PartialFunction[Any, B]) : WfActivity
+    def later         (f: Any => Any) : WfActivity 
+    def valueOf       (f: => Any) : WfActivity 
+    def matchLater[B] (f: PartialFunction[Any, B]) : WfActivity
 
-The signature shows another difference: these contain the actual body of scala code the activity will execute at run-time. It also makes them applicable to two different constructs:
+The signature shows another difference: these contain the actual body of scala code the activity will execute at run-time. It also makes them applicable to different constructs:
 
-    later { woohoo("b") _ }
+    later   { woohoo("b") _ }
+
+    valueOf { woohoo("b") (2) }
 
     matchLater {
       case l: List[String] => l mkString ","
@@ -110,6 +113,37 @@ This mode is very useful if all you want to do is run scala code with the seq/pa
 We can ensure the thing is ran strict. What this means is that ALL definition bodies are executed up-front, activities collected. After this pass, the workflow is built and its structure does not change anymore. It will simply be executed in the run pass. 
 
 This strict mode may make it easier to visualize the workflows and possibly write them.
+
+
+Running scala code in parallel
+------------------------------
+
+If all you want is to use the simple seq/par constructs to define a 'workflow' of asynchronous scala code, you can simply do this:
+
+    def wsp4 =
+      seq {
+        par {
+          seq { countWords (url1) }
+          seq { countWords (url2) }
+        }
+      }
+        
+This will simply count the words at two different URLs in parallel and join them when they finish. Note that because seq takes a Unit, you cannot pass the word counts back to par... to do that, just use the valueOf builder. The following assumes two functions countWords and sum:
+
+    def wsp4 =
+      seq {
+
+        par {
+          valueOf { countWords (url1) }
+          valueOf { countWords (url2) }
+        }
+
+        seq {
+          println ( "total words: " + sum($0.asInstanceOf[List[Int]]) )
+        }
+      }
+        
+Note that valueOf (x) is a leaf builder and the same as later (a=>x) - it's just a syntax beauty.
 
 
 DSL techniques
