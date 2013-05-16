@@ -154,7 +154,7 @@ object wf extends WfBaseLib[WfActivity] {
       l map (a +-> _.z)
       a
     } else
-      new WfScope(a, l: _*)
+      new WfScope(a, l)
 
   class LString(name: String) {
     //    def label (f: => WfActivity) = wf.label(name, f)

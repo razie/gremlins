@@ -109,7 +109,7 @@ class ProcessThread(
     val (out, next) = try {
       currAct.traverse(nextLink, ctx, currV)
     } catch {
-      case s @ _ => {
+      case s:Throwable => {
         // exception - just pick the first link out
         error("Exception while executing WfActivity:", s)
         s.printStackTrace()
@@ -238,7 +238,7 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
         val s = try {
           t.execAndAdvance._2 // this carries out the actual work...
         } catch {
-          case s @ _ => {
+          case _:Throwable => {
             Nil
           }
         }

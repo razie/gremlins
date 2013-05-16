@@ -45,7 +45,7 @@ class WTimer extends WRes with razie.Logging {
         }
         tick()
       } catch {
-        case _ => ; // nothing
+        case _:Throwable => ; // nothing
       }
     }
   }
@@ -62,7 +62,7 @@ class WTimer extends WRes with razie.Logging {
         } else false
       }
     } catch {
-      case e@_ => log("while notifying requestor of reply: ", e)
+      case e:Throwable => log("while notifying requestor of reply: ", e)
     }
     figureOutNextWakeTime
   }
@@ -118,7 +118,7 @@ class WTimer extends WRes with razie.Logging {
         } else false
       }
     } catch {
-      case e@_ => log("while notifying requestor of reply: ", e)
+      case e:Throwable => log("while notifying requestor of reply: ", e)
     }
 
     figureOutNextWakeTime

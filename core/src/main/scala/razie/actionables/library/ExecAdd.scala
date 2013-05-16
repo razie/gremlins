@@ -17,7 +17,7 @@ class ExecAdd () extends razie.gremlins.JWFunc {
      // java thinking
 	 var sum:String = ""
   
-    for (y <- in.getPopulatedAttr.toList.sort((a,b) => a.toString < b.toString)) 
+    for (y <- in.getPopulatedAttr.toList.sortWith((a,b) => a.toString < b.toString)) 
       sum = sum + (in a y)
     sum
      

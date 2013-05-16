@@ -37,8 +37,8 @@ scripster/blob/master/project/Build.scala :
 
 Versions
 
-- 0.6.3-SNAPSHOT is the last 2.9.1 build
 - 0.6.4-SNAPSHOT is the 2.10.0 build
+- 0.6.3-SNAPSHOT is the last 2.9.1 build
 
 
 Why?

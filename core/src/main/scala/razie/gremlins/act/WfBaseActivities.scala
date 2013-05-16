@@ -30,7 +30,7 @@ class WfSimple extends WfActivity {
 }
 
 /** note that this proxy is stupid... see WfElse to understand why... */
-class WfProxy(a: WfActivity, var l: WfLink*) extends WfSimple {
+class WfProxy(a: WfActivity, var l: Seq[WfLink]=Seq()) extends WfSimple {
   // if the depy was from a to someone, update it to be this to someone...?
   glinks = l.map(x => { if (x.a == a) new WfLink(this, x.z) else x })
 
@@ -69,15 +69,15 @@ class WfEnd(a: WfActivity*) extends WfSimple {
 /** the new proxy: contains a sub-graph.
  *  will point to the entry point of its sub-graph and connect the end of it to itself.
  */
-class WfScope(aa: WfActivity, var l: WfLink*) extends WfStart(aa) with HasDsl {
-  val end = new WfScopeEnd(aa, l: _*)
+class WfScope(aa: WfActivity, var l: Seq[WfLink]=Seq()) extends WfStart(aa) with HasDsl {
+  val end = new WfScopeEnd(aa, l)
   override def toString = super.toString + " --> " + end.toString
   override def toDsl = "scope " + (wf toDsl aa)
 }
 
 /** special activity - ends a scope and points to where the scope was meant to point to
  */
-class WfScopeEnd(s: WfActivity, var l: WfLink*) extends WfEnd(s) {
+class WfScopeEnd(s: WfActivity, var l: Seq[WfLink]=Seq()) extends WfEnd(s) {
   glinks = l.map(x => { if (x.a == s) new WfLink(this, x.z) else x })
 }
 

@@ -21,8 +21,8 @@ object GStudy5 {
 
   val vv = true -> a(31)
   
-case class GL5 (a:GN5, z:GN5) extends GLink[GN5]
-case class vGL5 (ia:GN5, iz:GN5, v:Any) extends GL5 (ia,iz)
+class GL5 (val a:GN5, val z:GN5) extends GLink[GN5]
+class vGL5 (ia:GN5, iz:GN5, v:Any) extends GL5 (ia,iz)
 
 class GN5 (val name : String) extends GNode[GN5, GL5] {
   var nodes : Seq[GN5] = Nil
@@ -32,20 +32,20 @@ class GN5 (val name : String) extends GNode[GN5, GL5] {
 
    /** reroute */
    def --> (z:GN5) = {
-     links = GL5(this,z) :: Nil
+     links = new GL5(this,z) :: Nil
      this
      }
    
    /** add a new dependency */
    def +-> (z:GN5) = {
-      links = GL5 (this, z) :: links.toList
+      links = new GL5 (this, z) :: links.toList
       this
    }
    
   /** par depy a -> (b,c) */
    def --> (z:Seq[GN5]) =
       if (links.isEmpty) {
-         links = z.map (GL5(this,_)).toList
+         links = z.map (new GL5(this,_)).toList
          this
       } else {
         new SubG (this,z) 
@@ -54,7 +54,7 @@ class GN5 (val name : String) extends GNode[GN5, GL5] {
    /** par depy a -> (b,c) */
    def --> [T <: Any] (z:Map[T,GN5]) =
       if (links.isEmpty) {
-         links = z.map (p => vGL5(this,p._2, p._1)).toList
+         links = z.map (p => new vGL5(this,p._2, p._1)).toList
          this
       } else {
 //        new SubG (this, z.map (p => vGL5(this,p.a, p.x))z) 

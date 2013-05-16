@@ -30,13 +30,13 @@ trait GremlinWf {
  
   // remote control
   // TODO should these be asynchronous or both versions?
-  def play (who:WPath)   
+  def play (who:WPath) : WPath
   def pause (who:WPath) : WPath
-  def breakpoint (who:WPath) 
+  def breakpoint (who:WPath) : WPath
   def stepOver (who:WPath) : WPath
   def stepInto (who:WPath) : WPath
   def stop (who:WPath) : WPath
-  def rollback (who:WPath)   
+  def rollback (who:WPath)    : WPath
   
   // travel api
   def supports (a:WfActivity) : Boolean
@@ -54,13 +54,13 @@ class GremlinWfImpl extends GremlinWf {
   def d (who:GRef) {}
  
   // remote control
-  def play (who:WPath)   = null
-  def pause (who:WPath) : WPath= null
-  def breakpoint (who:WPath) = null
+  def play (who:WPath) : WPath   = null 
+  def pause (who:WPath) : WPath= null 
+  def breakpoint (who:WPath) : WPath = null
   def stepOver (who:WPath) : WPath= null
   def stepInto (who:WPath) : WPath= null
   def stop (who:WPath) : WPath= null
-  def rollback (who:WPath)   = null
+  def rollback (who:WPath)  : WPath  = null
   
   // travel api
   def supports (a:WfActivity) : Boolean = false
