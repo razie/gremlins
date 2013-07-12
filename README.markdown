@@ -16,9 +16,9 @@ discussions gave me the motive. I know there's tons of workflow products but non
 Anyways, evolution requires diversity, so enough rationalization (there's more at the bottom), let's 
 dive into the fun stuff!
 
-Read more about the [vision](gremlins/blob/master/Gremlins.markdown), [how to build](gremlins/blob/master/Building.markdown) or the [design](gremlins/blob/master/src/razie/wf/Design.markdown).
+Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](src/razie/gremlins/Design.markdown).
 
-Probably more interesting is how to write [scala workflows](gremlins/blob/master/ScalaWorkflows.markdown)
+Probably more interesting is how to write [scala workflows](ScalaWorkflows.markdown)
 
 
 How to use
@@ -26,7 +26,7 @@ How to use
 
 The sbt/maven artifact is:
 
-    def gremlins = "com.razie" %% "gremlins"         % "0.6.3-SNAPSHOT"
+    def gremlins = "com.razie" %% "gremlins"         % "0.6.4-SNAPSHOT"
 
 Make sure that, if you use a SNAPSHOT version, the snapshots repository is added to sbt, as in https://github.com/razie/
 scripster/blob/master/project/Build.scala :
