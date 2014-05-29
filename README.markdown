@@ -16,7 +16,7 @@ discussions gave me the motive. I know there's tons of workflow products but non
 Anyways, evolution requires diversity, so enough rationalization (there's more at the bottom), let's 
 dive into the fun stuff!
 
-Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](src/razie/gremlins/Design.markdown).
+Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](core/src/main/scala/razie/gremlins/Design.markdown).
 
 Probably more interesting is how to write [scala workflows](ScalaWorkflows.markdown)
 
@@ -77,7 +77,7 @@ Examples
 v(c) (c ? P | c ! Q)
 --------------------
 
-PI/CSP examples in [CspDemo.scala](core/src/main/scala/razie/gremlins/lib/CspDemo.scala) and [CspTest.scala](gremlins/blob/master/core/src/test/scala/razie/gremlins/lib/CspTest.scala)
+PI/CSP examples in [CspDemo.scala](core/src/main/scala/razie/gremlins/lib/CspDemo.scala) and [CspTest.scala](core/src/test/scala/razie/gremlins/lib/CspTest.scala)
 
     def P = wf.log($0 + "-P")
     def Q = wf.log($0 + "-Q")
@@ -224,7 +224,7 @@ Nasty timeout - will interrupt the target thread if it takes too long and skip t
 Scala workflows
 ===============
 
-Due to popular demand, I created a "wfs" version to just run scala code in parallel. Read the detailed user guide [here ](gremlins/blob/master/ScalaWorkflows.markdown).
+Due to popular demand, I created a "wfs" version to just run scala code in parallel. Read the detailed user guide [here ](ScalaWorkflows.markdown).
 
 Lazy Example: 
 -------------
