@@ -86,12 +86,14 @@ PI/CSP examples in [CspDemo.scala](core/src/main/scala/razie/gremlins/lib/CspDem
     def myp02 = v(c) (c ? P | c ! Q)  // correct v(c) ( c(0) P | c<0> Q )
     myp02 run "1" == List("1-Q", "1-Q-P")
 
+If you don't know CSP, the process above will launch the two sub-processes P and Q in parallel. P will wait and be invoked for something coming out of the channel c while Q will run and put its result "1-Q" in that channel.
 
 Internal Scala DSL Structure
 ----------------------------
 
 Basic DSL contrast (scala vs text) in [WfBaseTest.scala](core/src/test/scala/razie/gremlins/WfBaseTest.scala)
 
+    //this is scala code (internal DSL with content assist and all that)
     def wif1 = 
     wif (_ == 1) {  // no good, really - condition not serializable
        wf.inc + wf.log ($0)
@@ -99,6 +101,7 @@ Basic DSL contrast (scala vs text) in [WfBaseTest.scala](core/src/test/scala/raz
        wf.inc + wf.inc + wf.log ($0)
      }
    
+    //this is text, parsed later (external DSL)
     def wif2s = """
     if ($0 == 1) then {
        inc; log ($0)
@@ -116,20 +119,21 @@ External DSL Structure
 
 Basic DSL examples in [WfBaseTest.scala](core/src/test/scala/razie/gremlins/WfBaseTest.scala)
 
-      def wpar5 = """                                                                                                                       
-    par {                                                                                                                                   
-      seq {                                                                                                                                 
-         inc                                                                                                                                
-         log($0)                                                                                                                            
-         }                                                                                                                                  
-      seq {                                                                                                                                 
-        inc                                                                                                                                 
-        log($0)                                                                                                                             
-        }                                                                                                                                   
-      }"""                                                                                                                                  
-                                                                                                                                        
-      def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }                                                                        
+    //external dsl format again (parsed by engine)
+    def wpar5 = """
 
+    par {
+      seq {
+        inc
+        log($0)
+        }
+      seq {
+        inc
+        log($0)
+        }
+      }"""
+      
+      def testwpar5 = expect (2::2::Nil) { (wf(wpar5).print run 1) }                                                                        
 
 And, why this workflows library is interesting
 ==============================================
@@ -141,12 +145,15 @@ This code
 
     def myp02 = v(c) (c ? P | c ! Q) 
     
+    println ("dsl:")
     println (wf toDsl myp02)
+    println ("graph:")
     myp02.print 
     println ("RRRRRRRRRRRRRESULT is: " + (myp02 run "1"))
   
 Will produce this result:
 
+    dsl:
     seq {
       channel (true,0,"c")
       scope par {
@@ -168,6 +175,7 @@ Will produce this result:
       }
     }
     
+    graph:
     Graph: 
     WfSeq()
     ->channel (true,0,"c")
