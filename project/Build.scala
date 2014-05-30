@@ -2,8 +2,8 @@ import sbt._
 import Keys._
 
 object V {
-  val version      = "0.6.4-SNAPSHOT"
-  val scalaVersion = "2.10.0"
+  val version      = "0.6.6-SNAPSHOT"
+  val scalaVersion = "2.10.3"
   val organization = "com.razie"
 
   def snap = (if (V.version endsWith "-SNAPSHOT") "-SNAPSHOT" else "")
@@ -11,11 +11,11 @@ object V {
 
 object MyBuild extends Build {
 
-  def scalatest = "org.scalatest"  % "scalatest_2.10.0" % "1.8"
+  def scalatest = "org.scalatest" %% "scalatest"        % "1.9.2"
   def junit     = "junit"          % "junit"            % "4.5"      % "test->default"
   def json      = "org.json"       % "json"             % "20090211"
   
-  def scripster = "com.razie"     %% "scripster"        % ("0.8.3" + V.snap)
+  def scripster = "com.razie"     %% "scripster"        % ("0.8.6" + V.snap)
 
   lazy val root = Project(id="gremlins",    base=file("."),
                           settings = defaultSettings ++ Seq()
