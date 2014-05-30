@@ -8,8 +8,8 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/scripster"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="lib" path="lib_managed/jars/org.json/json/json-20090211.jar"/>
-	<classpathentry kind="lib" path="lib_managed/jars/org.scalatest/scalatest_2.10.0/scalatest_2.10.0-1.8.jar"/>
-	<classpathentry kind="lib" path="lib_managed/jars/org.slf4j/slf4j-api/slf4j-api-1.6.4.jar"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_COMPILER_CONTAINER"/>
+	<classpathentry kind="lib" path="lib_managed/jars/org.scalatest/scalatest_2.10/scalatest_2.10-1.9.2.jar"/>
+	<classpathentry kind="lib" path="/razbase/lib_managed/jars/org.slf4j/slf4j-api/slf4j-api-1.6.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
