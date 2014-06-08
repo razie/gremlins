@@ -387,7 +387,8 @@ class wfs {
     vorigA --| va --| vac --| (head --> i) // --| result
   }
 
-  def wmap[T](branches: Int)(f: => WfActivity) = "wmap" label noCollect {
+  //todo
+  def todo_wmap[T](branches: Int)(f: => WfActivity) = "wmap" label noCollect {
     val (va1, v1) = wfs.ilet ("var-" + razie.g.GRef.uid) (wf.nop)
     val (va, v) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => 0))
     val (vac, vc) = wfs.ilet ("var-" + razie.g.GRef.uid) (new WfScalaV0(() => List()))

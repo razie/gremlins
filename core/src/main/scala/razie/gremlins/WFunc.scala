@@ -21,34 +21,29 @@ trait WFunc[T <: Any] { // extends PartialFunc ?
   def apply (in:ActionContext, prevValue:Any) : T
 }
 
-/** use for defaults */
-object WFuncNil extends WFunc[Any] {
-  override def apply (in:ActionContext, prevValue:Any) : Any = prevValue
-  
-  def == (a:Any, b:Any) : Boolean = a == b
-}
-
-/** use for defaults */
-case class WFCMP[T <: Any] (to:T, how: (Any,Any) => Boolean = WFuncNil.==) extends WFunc[Boolean] {
+/** test the value against another and return the result */
+case class WFCMP[T <: Any] (to:T, how: (Any,Any) => Boolean = {(a,b)=> a == b}) extends WFunc[Boolean] {
   override def apply (in:ActionContext, prevValue:Any) : Boolean = how(prevValue, to)
 }
 
-/** java friendly WFunc */
+/** java friendly WFunc interface */
 trait JWFunc extends WFunc[Any] {
   override def apply (in:ActionContext, prevValue:Any) : Any
 }
 
 //-------------------- serialization: not the best idea...but
 
-/** deserialization is assumed via DSL */
+/** deserialization is assumed via DSL 
+ *  
+ *  the idea is that all activities would have an external DSL form as well
+ *  and can serialize themselves in that form
+ *  
+ *  serialize the DEFINITION only - not including states/values
+ */
 trait HasDsl /*extends GReferenceable*/ {
   def serialize : String = toDsl
   
-  /* serialize the DEFINITION 
-   * 
-   * this must be the same format as the DSL one-liner or multiple lnes (for structured)
-   * 
-   * TODO could be better
+  /** serialize the DEFINITION - not including 
    */
   def toDsl : String 
   def toIndentedDsl (indent:Int=>String, level:Int) = indent(level) + toDsl
@@ -56,19 +51,16 @@ trait HasDsl /*extends GReferenceable*/ {
 
 /** 
  * if A extends B which HasDsl but not is serializable, tag it with this
- * 
- * TODO could be better
  */
-trait notisser /*extends GReferenceable*/ extends HasDsl {
+trait NoDsl extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("class notisser")
   override def toIndentedDsl (indent:Int=>String, level:Int) = throw new UnsupportedOperationException ("class notisser")
 }
 
-/** need to implement serialization
- * 
- * TODO could be better
+/** 
+ *  need to implement serialization
  */
-trait sertodo /*extends GReferenceable*/ extends HasDsl {
+trait TodoDsl /*extends GReferenceable*/ extends HasDsl {
   override def toDsl : String  = throw new UnsupportedOperationException ("serialization is TODO")
 }
 
@@ -79,7 +71,11 @@ trait WfExec extends WFunc[Any] {
   def wname : String = this.getClass.getSimpleName
 }
 
-/** libraries of executables should have this trait. You can have lib[WfActivity] or lib[WfExec] or whatever */
+/** 
+ *  libraries of executables should have this trait. 
+ *  
+ *  You can have lib[WfActivity] or lib[WfExec] or whatever 
+ */
 trait WfLibrary[T] { 
   /** wraps an WfExec into a WfActivity...customize this per implementation */
   def wrap (e:WfExec) : T

@@ -62,8 +62,8 @@ case class $Expr (name : String) extends AExpr ("$"+name) {
 
 /** boolean expressions */
 abstract class BExpr (e:String) extends Expr[Boolean] (e) {
-  def || (b:BExpr) = new BCMP1 (this,"||",b)
-  def && (b:BExpr) = new BCMP1 (this,"&&",b)
+  def || (b:BExpr) = new BCMP1 (this, "||", b)
+  def && (b:BExpr) = new BCMP1 (this, "&&", b)
   def not = new BCMPNot (this)
 }
 
@@ -150,12 +150,12 @@ trait WCFExpr extends JavaTokenParsers {
   def boolexpr: Parser[BExpr] = bterm1|bterm1~"||"~bterm1 ^^ { case a~s~b => bcmp(a,s,b) }
   def bterm1: Parser[BExpr] = bfactor1|bfactor1~"&&"~bfactor1 ^^ { case a~s~b => bcmp(a,s,b) }
   def bfactor1: Parser[BExpr] = eq | neq | lte | gte | lt | gt
-  def eq : Parser[BExpr] = expr~"=="~expr ^^ { case a~s~b => cmp(a,s,b) }
-  def neq: Parser[BExpr] = expr~"!="~expr ^^ { case a~s~b => cmp(a,s,b) }
-  def lte: Parser[BExpr] = expr~"<="~expr ^^ { case a~s~b => cmp(a,s,b) }
-  def gte: Parser[BExpr] = expr~">="~expr ^^ { case a~s~b => cmp(a,s,b) }
-  def lt : Parser[BExpr] = expr~"<"~expr ^^ { case a~s~b => cmp(a,s,b) }
-  def gt : Parser[BExpr] = expr~">"~expr ^^ { case a~s~b => cmp(a,s,b) }
+  def eq : Parser[BExpr] = expr ~ "==" ~ expr ^^ { case a~s~b => cmp(a,s,b) }
+  def neq: Parser[BExpr] = expr ~ "!=" ~ expr ^^ { case a~s~b => cmp(a,s,b) }
+  def lte: Parser[BExpr] = expr ~ "<=" ~ expr ^^ { case a~s~b => cmp(a,s,b) }
+  def gte: Parser[BExpr] = expr ~ ">=" ~ expr ^^ { case a~s~b => cmp(a,s,b) }
+  def lt : Parser[BExpr] = expr ~ "<"  ~ expr ^^ { case a~s~b => cmp(a,s,b) }
+  def gt : Parser[BExpr] = expr ~ ">"  ~ expr ^^ { case a~s~b => cmp(a,s,b) }
   
   def bcmp (a:BExpr, s:String, b:BExpr) = new BCMP1 (a,s,b)
   def cmp  (a:AExpr, s:String, b:AExpr) = new BCMP2 (a,s,b)

@@ -7,7 +7,10 @@ package razie.wfstest
 
 import org.scalatest.junit._
 import razie.gremlins.eng.{ Engine, Threads, Executors, Actors }
-
+  import razie.wfs._
+  import razie.wf       // can mix activities in a scala wd
+  
+// quick performance test for scala workflows
 class PerfScalaWorkflowTest extends JUnit3Suite {
 
   val noflows = 200
@@ -21,10 +24,6 @@ class PerfScalaWorkflowTest extends JUnit3Suite {
 
   val counter = new Counter(noflows)
 
-  // import the wfs instead of the wf to get the scala workflows
-  import razie.wfs._
-  import razie.wf       // can mix activities in a scala wd
-  
   def wpp1 = seq {
     wf.sleepAsync (delay)
     w { counter.inc }

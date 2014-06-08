@@ -1,4 +1,5 @@
-/** ____    __    ____  ____  ____,,___     ____  __  __  ____
+/**
+ *   ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -20,26 +21,7 @@ import razie.Logging
 /** special engine activities are tagged with this */
 trait SpecOps
 
-object Audit {
-  private def audit(aa: AA) = razie.Audit(aa)
-
-  val EV = "Event"
-  val PR = "process"
-  val AC = "activity"
-  val VAL = "value"
-
-  def recCreate(a: Process) = audit(razie.AA(EV, "CREATE", PR, a))
-  def recStart(a: Process, v: Any) = audit(razie.AA(EV, "START", PR, a, VAL, v.asInstanceOf[AnyRef]))
-  def recDone(a: Process, v: Any) = audit(razie.AA(EV, "DONE", PR, a, VAL, v.asInstanceOf[AnyRef]))
-  def recExecBeg(a: WfActivity, in: Any) =
-    audit(razie.AA(EV, "EXEC.beg", AC, a, "in", in.asInstanceOf[AnyRef]))
-  def recExecEnd(a: WfActivity, in: Any, out: Any, paths: Int) =
-    audit(razie.AA(EV, "EXEC.end", AC, a, "in", in.asInstanceOf[AnyRef], "out", out.asInstanceOf[AnyRef], "paths", paths))
-  def recResNotFound(a: WfActivity, res: GRef) =
-    audit(razie.AA(EV, "ERROR.resNotFound", AC, a, "res", res))
-}
-
-/** the state of a Process Thread */
+/** the state of a Process Thread: current value, current activity etc */
 class PTState(start: WfActivity, startValue: Any, startLink: Option[WfLink]) {
   var currV: Any = startValue
 
@@ -57,15 +39,21 @@ class PTState(start: WfActivity, startValue: Any, startLink: Option[WfLink]) {
   var nextLink = startLink
 }
 
-/** a process thread encapsulates the state of a running workflow branch. You can see this as an
+/**
+ * a process thread encapsulates the state of a running workflow branch. You can see this as an
  *  actor as well. Depending on the engine, each PT may have its own processor, thread or whatever...
+ *
  *  conceptually these are independent paths of execution, for the PAR/JOIN branches for instance
  */
 class ProcessThread(
-  val parent: Process, start: WfActivity, startLink: Option[WfLink],
-  val ctx: AC, startValue: Any) extends PTState(start, startValue, startLink) with Logging {
+  val parent: Process,
+  start: WfActivity,
+  startLink: Option[WfLink],
+  val ctx: AC, 
+  startValue: Any) extends PTState(start, startValue, startLink) with Logging {
   // should i keep state inside the activities or outside in a parallel graph, built as it's traversed?
 
+  /** pre-processing the next activity */
   protected def preProcessing = {
     // TODO keep skipping who's not ready...
     //    Graphs.colored [WfActivity, WfLink] (nextAct) { n => 
@@ -76,8 +64,8 @@ class ProcessThread(
     //    }
 
     // for now: limitation: skip just one single node which must have just one branch out
-    // loops allow DONE actions to be executed again, so we only skip them if SKIPPED as well
     nextAct.synchronized {
+      // loops allow DONE actions to be executed again, so we only skip them if SKIPPED as well
       if (nextAct.procState == ProcState.DONE && nextAct.procStatus == ProcStatus.SKIPPED) {
         nextLink = nextAct.glinks.headOption
         razie Debug "skipping (%s) because it's already DONE.SKIPPED, next is: %s".format(nextAct, nextLink.get.z)
@@ -92,14 +80,16 @@ class ProcessThread(
     }
   }
 
+  /** post-processing the next activity */
   protected def postProcessing = {
     currAct match {
       case aj: AndJoin => if (aj.isComplete) currAct.procState = ProcState.DONE
-      case ca @ _      => currAct.procState = ProcState.DONE
+      case ca @ _ => currAct.procState = ProcState.DONE
     }
   }
 
-  /** execute current action and advance: return continuations: either myself or a
+  /**
+   * execute current action and advance: return continuations: either myself or a
    *  bunch of spawns
    */
   def execAndAdvance: (Any, Seq[ProcessThread]) = {
@@ -109,7 +99,7 @@ class ProcessThread(
     val (out, next) = try {
       currAct.traverse(nextLink, ctx, currV)
     } catch {
-      case s:Throwable => {
+      case s: Throwable => {
         // exception - just pick the first link out
         error("Exception while executing WfActivity:", s)
         s.printStackTrace()
@@ -123,15 +113,15 @@ class ProcessThread(
     next map (_.linkState = LinkState.SELECTED)
 
     val ret = if (next.size == 1) {
+      // continue on this thread with this next activity
       nextLink = next.headOption
       nextAct = next.head.z
       this :: Nil // myself continues
     } else {
+      // I'm done in this case and replace myself with these spawns
       nextAct = null
       if (next.size > 1)
-        // TODO what value to use for start here?
         next.map(l => new ProcessThread(parent, l.z, Some(l), ctx, currV))
-      // note that I'm done in this case and replace myself with these spawns
       else
         Nil // done - no continuations
     }
@@ -148,7 +138,8 @@ class ProcessThread(
   def done(): Boolean = { val b = nextAct == null; debug("done: " + b); b }
 }
 
-/** a process instance encapsulates the state of the running workflow
+/**
+ * a process instance encapsulates the state of the running workflow
  *
  *  the state needed to recover is: the definition graph, the graph of states with links to specs and
  *  the values context.
@@ -195,10 +186,12 @@ class Process(val start: WfActivity, startV: Any, val ctx: AC) extends Logging {
   }
 }
 
-/** TODO use this
- * execution settings for a single wf instance */
+/**
+ * TODO use this
+ * execution settings for a single wf instance
+ */
 class WfSettings(start: WfActivity) {
-  var _optimize      = true
+  var _optimize = true
   var _honourThreads = true
 
   /** optimize synchronous chains with recursive calls */
@@ -209,18 +202,19 @@ class WfSettings(start: WfActivity) {
 }
 
 /** the engine is more complicated in this case, basically graph traversal */
-abstract class Engine extends Doer with EngineStrategy with Logging {
-  override protected val logger = newlog (classOf[Engine])
+abstract class Engine extends MsgProcessor with EngineStrategy with Logging {
+  override protected val logger = newlog(classOf[Engine])
 
+  /** the processes in progress managed by this engine */
   val processes = new scala.collection.mutable.ListBuffer[Process]()
   var stopped = false
 
   /** process one tick, advancing one execution path along the way - call from either threads or actors */
-  override def processpTick(msg: PMsg, killeable: Killeable) {
+  override def pmsg(msg: PMsg, killeable: Killeable) {
     msg match {
       // tick is used just to kickstart all threads
-      case Tick(p, a) => {
-        p.currThreads.map(pspawn(_))
+      case StartThreads(p, a) => {
+        p.currThreads map pspawn
         val s = p.currThreads.map(Tack(p, _, a)).toList
         p setThreadCount s.size
         s foreach (psend(_))
@@ -231,102 +225,103 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
   }
 
   /** process one tick, advancing one execution path along the way - call from either threads or actors */
-  override def processtTack(msg: PTMsg, killeable: Killeable) {
+  override def ptmsg(msg: PTMsg, killeable: Killeable) {
 
-      def processTack(p: Process, t: ProcessThread, a: Actor) {
-        t.currActor = Option(killeable) // TODO Option(this)
-        val s = try {
-          t.execAndAdvance._2 // this carries out the actual work...
-        } catch {
-          case _:Throwable => {
-            Nil
+    def processTack(p: Process, t: ProcessThread, a: Actor) {
+      t.currActor = Option(killeable) // TODO Option(this)
+      val s = try {
+        t.execAndAdvance._2 // this carries out the actual work...
+      } catch {
+        case _: Throwable => {
+          Nil
+        }
+      }
+      t.currActor = None
+
+      // some special activities are handled right here, not in their own traverse()
+      t.currAct match {
+
+        case re: WfResReq => { // make the actual request
+          val cback = new WResUser {
+            override def key = GRef.id("blahblah", "?")
+            def notifyReply(reply: WRes.ReqReply) = psend(Reply(p, t, reply, a))
+            def notifyScrewup(who: WRes) = {
+              psend(Reply(p, t, null, a))
+              throw new UnsupportedOperationException("TODO") // TODO
+            }
+          }
+
+          t.currReq = Some(
+            new WRes.Req(cback, re.tok, re.what, re.attrs, re.value(t.ctx, t.currV)))
+
+          debug("ENG.Req: " + t.currReq.get)
+          val rep = re.req(t.currReq.get)
+          debug("ENG.Req returned: " + rep)
+          
+          rep match {
+            case ok @ Some(WResRROK(w, tok, r)) => psend(Reply(p, t, ok.get, a))
+            case er @ Some(WResRRERR(w, tok, e)) => psend(Reply(p, t, er.get, a))
+            case wa @ Some(WResRRWAIT(w, tok)) => ; // current action waits
+            case None => Audit.recResNotFound(re, re.res)
           }
         }
-        t.currActor = None
 
-        // some special activities are handled right here, not in their own traverse()
-        t.currAct match {
+        //              case co: WfStopOthers => { // cancel others
+        //                Debug("ENG.cancelOthers: " + t.currReq.get)
+        //                val s = p.currThreads.filter(_ != t).map(StopThread(p, _, a)).toList
+        //                s foreach (processor ! _)
+        //              }
 
-          case re: WfResReq => { // make the actual request
-            val cback = new WResUser {
-              override def key = GRef.id("blahblah", "?")
-              def notifyReply(reply: WRes.ReqReply) = psend(Reply(p, t, reply, a))
-              def notifyScrewup(who: WRes) = {
-                psend(Reply(p, t, null, a))
-                throw new UnsupportedOperationException("TODO") // TODO
-              }
-            }
+        // otherwise, it's a normal activity, continue all remaining threads
+        case cact @ _ =>
+          {
+            cact match {
+              case co: WfSkip => { // cancel a target
+                debug("ENG.skip")
 
-            t.currReq = Some(
-              new WRes.Req(cback, re.tok, re.what, re.attrs, re.value(t.ctx, t.currV)))
-
-            debug("ENG.Req: " + t.currReq.get)
-            val rep = re.req(t.currReq.get)
-            debug("ENG.Req returned: " + rep)
-            rep match {
-              case ok @ Some(WResRROK(w, tok, r))  => psend(Reply(p, t, ok.get, a))
-              case er @ Some(WResRRERR(w, tok, e)) => psend(Reply(p, t, er.get, a))
-              case wa @ Some(WResRRWAIT(w, tok))   => ; // current action waits
-              case None                            => Audit.recResNotFound(re, re.res)
-            }
-          }
-
-          //              case co: WfStopOthers => { // cancel others
-          //                Debug("ENG.cancelOthers: " + t.currReq.get)
-          //                val s = p.currThreads.filter(_ != t).map(StopThread(p, _, a)).toList
-          //                s foreach (processor ! _)
-          //              }
-
-          // otherwise, it's a normal activity, continue all remaining threads
-          case cact @ _ =>
-            {
-              cact match {
-                case co: WfSkip => { // cancel a target
-                  debug("ENG.skip")
-
-                  // try right here, maybe we're lucky - otherwise we may miss this one due to competing threads
-                  val target = co.target
-                  target.synchronized { // I don't suppose this is going to get me in trouble, is it?
-                    if (target.procState == ProcState.CREATED) {
-                      debug("ENG.preempt.skipping: " + target)
-                      target.procState = ProcState.DONE
-                      target.procStatus = ProcStatus.SKIPPED
-                    }
+                // try right here, maybe we're lucky - otherwise we may miss this one due to competing threads
+                val target = co.target
+                target.synchronized { // I don't suppose this is going to get me in trouble, is it?
+                  if (target.procState == ProcState.CREATED) {
+                    debug("ENG.preempt.skipping: " + target)
+                    target.procState = ProcState.DONE
+                    target.procStatus = ProcStatus.SKIPPED
                   }
-
-                  // send the message anyways...
-                  psend(Skip(p, t, a, target))
                 }
-                case _ => ;
-              }
 
-              p.synchronized {
-                p setThreadCount (s.size - 1) // TODO really?
-                p.currThreads = p.currThreads.filter(!s.contains(_)) ++ s
-                //                trace(">>> new waveline: " + p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = " + p.getThreadCount)
-                debug(">>> new waveline: %s - threadCount = %s".format(
-                  p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")),
-                  p.getThreadCount))
-                // TODO err if first action on only thread is REQ then it will finish before reply
-                if (p.done) {
-                  trace("DOOOOOOOOOOOOOOOOOOONE");
-                  a ! Done(p)
-                  assert(s.size == 0)
-                } // how to return the value?
+                // send the message anyways...
+                psend(Skip(p, t, a, target))
               }
+              case _ => ;
             }
-            s filter (_ != t) map (pspawn(_))
-            s map (ptt => {
-              val optimize = false
-              if (s.size == 1 && optimize) // sync optimization: recurse rather than async
-                processTack (p, ptt, a)
-              else psend(Tack(p, ptt, a))
-            })
-        }
-      } // processTack
+
+            p.synchronized {
+              p setThreadCount (s.size - 1) // TODO really?
+              p.currThreads = p.currThreads.filter(!s.contains(_)) ++ s
+              //                trace(">>> new waveline: " + p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")) + " - threadCount = " + p.getThreadCount)
+              debug(">>> new waveline: %s - threadCount = %s".format(
+                p.currThreads.map(tt => Option(tt.currAct).map(_.key).getOrElse("?")),
+                p.getThreadCount))
+              // TODO err if first action on only thread is REQ then it will finish before reply
+              if (p.done) {
+                trace("DOOOOOOOOOOOOOOOOOOONE");
+                a ! Done(p)
+                assert(s.size == 0)
+              } // how to return the value?
+            }
+          }
+          s filter (_ != t) map (pspawn(_))
+          s map (ptt => {
+            val optimize = false
+            if (s.size == 1 && optimize) // sync optimization: recurse rather than async
+              processTack(p, ptt, a)
+            else psend(Tack(p, ptt, a))
+          })
+      }
+    } // processTack
 
     msg match {
-      case Tack(p, t, a) => processTack (p, t, a)
+      case Tack(p, t, a) => processTack(p, t, a)
 
       // reply from resource - continue original thread
       case Reply(p, t, rr, a) => {
@@ -382,7 +377,7 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
 
   def create(start: WfActivity, startV: Any, ctx: AC = razie.base.scripting.ScriptFactory.mkContext("scala", null)): GRef = {
     val p = new Process(wf.scope(start), startV, ctx)
-    processes += p
+    engSync { processes += p }
 
     Audit.recCreate(p)
     p.id
@@ -394,7 +389,8 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
     t._1.id
   }
 
-  private def bubusync[T](f: => T): T = synchronized { f }
+  //todo how to sync on super in inner class?
+  private def engSync[T](f: => T): T = synchronized { f }
 
   private[this] def istart(id: GRef, startV: Any, async: Boolean): (Process, Actor) = {
     val p = processes.find(_.id == id) getOrElse (throw new IllegalArgumentException("Process not found id: " + id))
@@ -406,11 +402,11 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
         case Start(p) => {
           preProcess(p)
           pspawn(p)
-          psend(Tick(p, this))
+          psend(StartThreads(p, this))
           receive {
             case Done(p) => {
               Audit.recDone(p, p.lastV)
-              bubusync { processes -= p } // maybe keep it around?
+              engSync { processes -= p } // maybe keep it around?
             }
           }
           reply()
@@ -432,7 +428,8 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
     t._1.lastV
   }
 
-  /** start a workflow instance and do not wait for result
+  /**
+   * start a workflow instance and do not wait for result
    *
    *  TODO start should return a Future/Promise ?
    */
@@ -461,13 +458,14 @@ abstract class Engine extends Doer with EngineStrategy with Logging {
       (n: WfActivity, v: Int) => {},
       (l: WfLink, v: Int) => l.z match {
         case a: AndJoin => a addIncoming l;
-        case _          =>
+        case _ =>
       })
   }
 
   def checkpoint() {}
 
-  /** stop the engine
+  /**
+   * stop the engine
    *
    *  @param forced if true, the processes will be killed
    *  @param timeout how long to wait in case anyone is still running - it will sleep in 250ms chunks so not to waste your time
@@ -523,7 +521,8 @@ object wfeng {
   def andjoin(a: WfActivity*): WfActivity = wf.todo
 }
 
-/** special engine activity to skip another. The function will find the target
+/**
+ * special engine activity to skip another. The function will find the target
  *  dynamically, starting from me... see the cancel() construct
  */
 class WfSkip(private val findTarget: WfActivity => WfActivity) extends WfActivity with HasDsl with SpecOps {

@@ -10,6 +10,8 @@ import razie.GPath
 import razie.wf
 import razie.Gremlins
 
+// ---------- Distributed workflows - this is non-functional WIP
+
 trait WfHandle {
   val eng : GremlinWf
   val me : GRef

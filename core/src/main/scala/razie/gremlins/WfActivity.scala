@@ -42,16 +42,16 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   override def toString: String = this.getClass().getSimpleName + " (" + key + ")"
 
   // syntax niceties 
-  
+
   /** build a sequence */
   def +(e: WfActivity): WfActivity = new gremlins.act.WfSeq(this, e)
-  
+
   /** build a parallel branch */
   def |(e: WfActivity): WfActivity = new gremlins.act.WfPar(this, e)
 
   // limit depth for debugging purposes
   override def mkString = Graphs.entire[WfActivity, WfLink](this).dag.mkString
-  
+
   /** debugging helper - prints to console */
   def print(): WfActivity = { println(this.mkString); this }
 
@@ -60,18 +60,18 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
 
   /** launch a workflow, wait and return the result. AVOID using this method except for tests and demos */
   def run(initialValue: Any): Any = Gremlins().exec(this, initialValue)
-  
+
   /** start this workflow instance - do NOT wait for result */
   def start(initialValue: Any): Any = Gremlins().start(this, initialValue)
-  
+
   /** debugging helper - prints to console and runs */
   def printAndRun(initialValue: Any) = {
     val ctx = razie.base.scripting.ScriptFactory.mkContext("scala", null)
-    val out = razie.Gremlins().exec (this.print, initialValue)
-    println ("============= RESULTS ===============")
+    val out = razie.Gremlins().exec(this.print, initialValue)
+    println("============= RESULTS ===============")
     this.print;
-    println ("context: " + ctx)
-    println ("value: " + out)
+    println("context: " + ctx)
+    println("value: " + out)
     out
   }
 
@@ -104,8 +104,9 @@ abstract class WfActivity extends razie.g.GNode[WfActivity, WfLink] with act.Wfa
   def dag = razie.g.Graphs.entire[WfActivity, WfLink](this).dag
 
   /**
-   * this will bind it to a parent in a DSL construct. Use this very carefully.
-   *  Find usages by seeing who pushes self into WfaCollector
+   * DSL helper - this will bind it to a parent in a DSL construct. Use this very carefully.
+   *
+   * Find usages by seeing who pushes self into WfaCollector
    */
   WfaCollector.current.map { _ collect this }
 }

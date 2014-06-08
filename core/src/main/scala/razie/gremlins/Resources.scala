@@ -39,9 +39,6 @@ object WRes {
        class ReqReply (val who:WResUser, val token:String)
 }
 
-//case class WRes.Req      (who:WResUser, token:String, what:String, attrs:AC, value:Any)
-  
-//     class WRes.ReqReply (val who:WResUser, val token:String)
 case class WResRROK     (wwho:WResUser, ttoken:String, result:Any) extends WRes.ReqReply (wwho, ttoken)
 case class WResRRERR    (wwho:WResUser, ttoken:String, err:Any) extends WRes.ReqReply (wwho, ttoken)
 case class WResRRWAIT   (wwho:WResUser, ttoken:String) extends WRes.ReqReply (wwho, ttoken)
@@ -102,12 +99,13 @@ class WfResReplyIgnore extends WfResReply {
   override def toDsl  = "ResReplyIgnore"
 }
 
+/** just someone to own all resources */
 object AllResources extends GResolver [WRes] {
   val resources = new scala.collection.mutable.HashMap[GRef, WRes]()
 
   def add (res : WRes) : WRes = synchronized { resources += (res.key -> res); res }
   def remove (key:GRef) = synchronized { resources remove key }
-  def clear = resources.clear
+  def clear = synchronized { resources.clear }
   
   override def resolve (key : GRef) : Option[WRes] = synchronized {resources get key}
   def resolveOrCreate (key : GRef) (f: =>WRes) : Option[WRes] = synchronized {

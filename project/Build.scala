@@ -15,6 +15,8 @@ object MyBuild extends Build {
   def junit     = "junit"          % "junit"            % "4.5"      % "test->default"
   def json      = "org.json"       % "json"             % "20090211"
   
+  def akka      = "org.scala-lang" % "scala-actors"    % "2.10.3"
+  
   def scripster = "com.razie"     %% "scripster"        % ("0.8.6" + V.snap)
 
   lazy val root = Project(id="gremlins",    base=file("."),
@@ -23,7 +25,7 @@ object MyBuild extends Build {
 
   lazy val core = Project(id="gremlins-core", base=file("core"),
                           settings = defaultSettings ++ 
-                          Seq(libraryDependencies ++= Seq(scalatest, junit, json, scripster))
+                          Seq(libraryDependencies ++= Seq(akka, scalatest, junit, json, scripster))
                   )
 
   def defaultSettings = baseSettings ++ Seq()

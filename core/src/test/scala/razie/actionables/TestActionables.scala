@@ -3,15 +3,16 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.actionables.test
+package razie.actionables
 
 import com.razie.pub.base.data._
 import com.razie.pub.base._
-//import com.razie.pub.assets._
 import razie.actionables._
 import razie.actionables.library._
 import razie.base._
 import org.scalatest.junit._
+import razie.actionables.Actionables.make
+import razie.actionables.Actionables.makeProxy
 
 /** need this for dynamic proxies - these need an interface apparently...? */
 trait SimpleTrait {

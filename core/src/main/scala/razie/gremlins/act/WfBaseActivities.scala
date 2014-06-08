@@ -1,4 +1,4 @@
-/** ____    __    ____  ____  ____,,___     ____  __  __  ____
+/**  ____    __    ____  ____  ____,,___     ____  __  __  ____
  *  (  _ \  /__\  (_   )(_  _)( ___)/ __)   (  _ \(  )(  )(  _ \           Read
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
@@ -45,7 +45,7 @@ class WfWrapper(wrapped: WfExec) extends WfSimple with WfExec with HasDsl {
   override def apply(in: AC, prevValue: Any) = wrapped.apply(in, prevValue)
 
   override def toString: String = wrapped match {
-    case d: notisser => "wf." + wrapped.wname
+    case d: NoDsl => "wf." + wrapped.wname
     case d: HasDsl   => d.toDsl + "(" + key + ")"
     case _           => "wf." + wrapped.wname
   }
@@ -84,7 +84,7 @@ class WfScopeEnd(s: WfActivity, var l: Seq[WfLink]=Seq()) extends WfEnd(s) {
 //------------------------- selector
 
 /** selector activity selects one of the branches, based on its value - the basis for many other */
-class WfSelOne(expr: WFunc[_] = WFuncNil) extends WfSimple {
+class WfSelOne(expr: WFunc[_]) extends WfSimple {
 
   override def traverse(in: AC, v: Any): (Any, Seq[WfLink]) = {
     val sel = expr.apply(in, v)
@@ -205,7 +205,7 @@ class WfSeq(a: WfActivity*) extends WfBound with HasDsl {
  *  NOTE this is a scoped activity - it will scope the enclosed sub-graphs
  */
 class WfPar(a: WfActivity*) extends WfBound with HasDsl {
-  lazy val aj = WfaCollector.noCollect { new eng.AndJoin() }
+  lazy val aj = WfaCollector.noCollect { eng.AndJoin() }
 
   var gnodes = a map wf.scope
   glinks = gnodes map (x => new WfLink(this, x))

@@ -33,5 +33,12 @@ object Gremlins {
     }
   
   def apply() : Engine = synchronized { val e = (dflt getOrElse live); if (e.stopped) live else e }
+
+  def using (e: Engine) (work: => Any) = {
+    razie.Gremlins.liveInside (e)
+    val ret = work
+    razie.Gremlins.die()
+    ret
+  }
 }
 

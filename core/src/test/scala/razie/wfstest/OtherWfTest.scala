@@ -11,13 +11,10 @@ import razie.Gremlins
 import razie.base.scripting.ScalaScriptContext
 import razie.base.scripting.ScalaScript
 
+// test difference between strict mode and not strict
 class OtherWfTest extends JUnit3Suite {
-  // import the wfs instead of the wf to get the scala workflows
   import razie.wfs
   import razie.wfs._
-
-  import razie.wfs._
-  import razie.gremlins.eng.{ Engine, Threads, Executors, Actors }
 
   val threads = new collection.mutable.HashSet[String]()
 

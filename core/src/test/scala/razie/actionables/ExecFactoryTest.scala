@@ -3,11 +3,13 @@
  *   )   / /(__)\  / /_  _)(_  )__) \__ \    )___/ )(__)(  ) _ <     README.txt
  *  (_)\_)(__)(__)(____)(____)(____)(___/   (__)  (______)(____/    LICENSE.txt
  */
-package razie.actionables.test
+package razie.actionables
 
 import org.scalatest.junit._
 import razie.actionables._
 import razie.actionables.library._
+import razie.AI.stoai
+import razie.actionables.Actionables.make
 
 class ExecFactoryTest extends JUnit3Suite {
    import Actionables._
