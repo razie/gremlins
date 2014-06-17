@@ -44,8 +44,8 @@ object MyBuild extends Build {
         Some ("Sonatype" at "https://oss.sonatype.org/content/repositories/releases/")
     },
 
-    resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
-                      "releases"  at "http://oss.sonatype.org/content/repositories/releases")    )
+    resolvers ++= Seq("snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+                      "releases"  at "https://oss.sonatype.org/content/repositories/releases")    )
 
 
 }
