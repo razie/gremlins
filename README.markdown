@@ -7,14 +7,11 @@
      */
 
 
-Razie's Pub Workflow Engine
-===========================
+v(c) (c ? P | c ! Q)
+--------------------
 
 I've been meaning to write a workflow engine/language for sometime and recently, some scala DSL 
-discussions gave me the motive. I know there's tons of workflow products but none complete and to my liking.
-
-Anyways, evolution requires diversity, so enough rationalization (there's more at the bottom), let's 
-dive into the fun stuff!
+discussions gave me the motive to explore these ideas.
 
 Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](core/src/main/scala/razie/gremlins/Design.markdown).
 
