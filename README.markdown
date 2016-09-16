@@ -1,22 +1,12 @@
-    /**  ____    __    ____  ____  ____/___      ____  __  __  ____
-     *  (  _ \  /__\  (_   )(_  _)( ___) __)    (  _ \(  )(  )(  _ \
-     *   )   / /(__)\  / /_  _)(_  )__)\__ \     )___/ )(__)(  ) _ <
-     *  (_)\_)(__)(__)(____)(____)(____)___/    (__)  (______)(____/
-     *                      
-     *  Copyright (c) Razvan Cojocaru, 2007+, Creative Commons Attribution 3.0
-     */
-
 
 v(c) (c ? P | c ! Q)
 --------------------
 
-I've been meaning to write a workflow engine/language for sometime and recently, some scala DSL 
-discussions gave me the motive to explore these ideas.
+An asynchronous workflow engine & language exploration (scala internal and external DSL). The engine has two implementations, one with plain threads and one with actors, both sharing the same core.
 
 Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](core/src/main/scala/razie/gremlins/Design.markdown).
 
 Probably more interesting is how to write [scala workflows](ScalaWorkflows.markdown)
-
 
 How to use
 ---------------------
@@ -47,7 +37,7 @@ The three ingredients are: flexibility, expressivity and low cost.
 
 Cost to create a workflow must be low. That implies graphical representations, DSL etc. Cost to run this framework must be low. Cost to re-configure, debug and operate must be low.
 
-The framework must allow users to express any construct they can think of and support it.
+The framework must allow users to express any construct they can think of (i.e. custom templates).
 
 Flexibility is a trait embedded in the scala language. The framework must be flexible so new patterns, constructs and whatnot be allowed.
 
