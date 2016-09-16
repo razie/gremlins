@@ -1,7 +1,49 @@
 Scala workflows
 ==================
 
-A scala workflow is one where the activities are scala code. Since these are defined as a scala DSL, there are two passes: the first pass that will build the workflow structure and the second pass that actually runs the workflow:
+A scala workflow is one where the activities are scala code. 
+
+The activity builders
+==============
+
+Will walk through the main activity builders, so you can understand how they work. There's just two categories right now with about 2 each, so 4 in total.
+
+
+seq, par
+-----------
+
+    def seq(f: => Unit): WfActivity
+    def par(f: => Unit): WfActivity
+
+The signature tells you that it takes an anonymous piece of code as a definition body, will run it at definition time and collect any activities defined by embedded builders.
+
+The difference between seq/par is not at definition time but at run-time. That's when par will launch its collected activities in parallel rather than sequence. Also, the resulting value of a seq activity is the value of its last child activity while par, it acts like a fork-join and will collect the values returned by each of its parallel branches into a list.
+
+
+later, matchLater
+-----------------
+
+While seq/par deal with the structure of the workflow, later/matchLater build leaf activities which cannot have children. If you use any other builder inside one of these, you should get an error at definition time.
+
+    def later         (f: Any => Any) : WfActivity 
+    def valueOf       (f: => Any) : WfActivity 
+    def matchLater[B] (f: PartialFunction[Any, B]) : WfActivity
+
+The signature shows another difference: these contain the actual body of scala code the activity will execute at run-time. It also makes them applicable to different constructs:
+
+    later   { woohoo("b") _ }
+
+    valueOf { woohoo("b") (2) }
+
+    matchLater {
+      case l: List[String] => l mkString ","
+    }
+
+
+Two passes: define and run
+========================
+
+Since these are defined as a scala DSL, there are two passes: the first pass that will build the workflow structure and the second pass that actually runs the workflow:
 
     import razie.wfs._
       def woohoo(app: String)(in: Any): Any = {
@@ -44,43 +86,6 @@ The way this works is: there are a few workflow acitivy builders: seq, par, wfs.
 We will call the two passes: definition time and run time. The two different bodies of the different activity builders will be:
 * the definition body is what you see and it may or may not build activities
 * the workflow body is the structure of activities built during the definition pass
-
-
-The activity builders
-==============
-
-Will walk through the main activity builders, so you can understand how they work. There's just two categories right now with about 2 each, so 4 in total.
-
-
-seq, par
------------
-
-    def seq(f: => Unit): WfActivity
-    def par(f: => Unit): WfActivity
-
-The signature tells you that it takes an anonymous piece of code as a definition body, will run it at definition time and collect any activities defined by embedded builders.
-
-The difference between seq/par is not at definition time but at run-time. That's when par will launch its collected activities in parallel rather than sequence. Also, the resulting value of a seq activity is the value of its last child activity while par, it acts like a fork-join and will collect the values returned by each of its parallel branches into a list.
-
-
-later, matchLater
------------------
-
-While seq/par deal with the structure of the workflow, later/matchLater build leaf activities which cannot have children. If you use any other builder inside one of these, you should get an error at definition time.
-
-    def later         (f: Any => Any) : WfActivity 
-    def valueOf       (f: => Any) : WfActivity 
-    def matchLater[B] (f: PartialFunction[Any, B]) : WfActivity
-
-The signature shows another difference: these contain the actual body of scala code the activity will execute at run-time. It also makes them applicable to different constructs:
-
-    later   { woohoo("b") _ }
-
-    valueOf { woohoo("b") (2) }
-
-    matchLater {
-      case l: List[String] => l mkString ","
-    }
 
 
 Strict versus non-strict
