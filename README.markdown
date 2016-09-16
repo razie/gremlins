@@ -2,15 +2,16 @@
 v(c) (c ? P | c ! Q)
 --------------------
 
-An asynchronous workflow engine & language exploration (scala internal and external DSL). The engine has two implementations, one with plain threads and one with actors, both sharing the same core.
+An asynchronous workflow engine & language exploration (scala internal and external DSL). The engine has two implementations, one with plain threads and one with actors, both sharing the same core. The internal scala DSL designed to support custom templates of activities.
 
 Read more about the [vision](Gremlins.markdown), [how to build](Building.markdown) or the [design](core/src/main/scala/razie/gremlins/Design.markdown).
 
 Probably more interesting is how to write [scala workflows](ScalaWorkflows.markdown)
 
+Status: not maintained
+
 Examples
 ========
-
 
 v(c) (c ? P | c ! Q)
 --------------------
