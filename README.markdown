@@ -1,3 +1,4 @@
+Note that this project is not maintained anymore, superseeded by [Diesel](https://github.com/razie/diesel-apps/tree/master/diesel), an external asynchronous rules DSL.
 
 v(c) (c ? P | c ! Q)
 --------------------
